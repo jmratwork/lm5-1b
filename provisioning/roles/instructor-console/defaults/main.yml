@@ -1,0 +1,28 @@
+---
+instructor_console_user: instructor
+instructor_console_workspace: /opt/instructor-console
+instructor_console_tmux_conf: /home/{{ instructor_console_user }}/.tmux.conf
+instructor_console_aliases: /etc/profile.d/instructor-console.sh
+instructor_console_shortcuts:
+  - name: open_gophish_admin
+    command: "firefox http://phishing-simulator.internal:3333/"
+  - name: open_lms_portal
+    command: "firefox http://lms.internal:8080/"
+  - name: open_mailhog
+    command: "firefox http://mail-relay.internal:8025/"
+  - name: open_grafana
+    command: "firefox http://reporting.internal:3000/"
+  - name: show_gophish_credentials
+    command: "cat /opt/phishing-simulator/admin_credentials.txt"
+instructor_console_tmux_settings:
+  mouse_mode: true
+  history_limit: 10000
+  status_bar_colour: '#268bd2'
+  windows:
+    - name: gophish
+      command: "ssh phishing-simulator"
+    - name: mail-relay
+      command: "ssh mail-relay"
+    - name: monitoring
+      command: "ssh reporting-workspace"
+instructor_console_healthcheck_command: "tmux list-sessions"

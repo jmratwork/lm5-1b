@@ -1,0 +1,16 @@
+---
+trainee_workstation_collector_ingestion_token: rep-core-trainee-collector-7b92de11
+
+# PUC2-Sub Case 2a: URLs exposed to trainee workstations
+trainee_workstation_lms_url: "http://lms.internal:8080/"
+trainee_workstation_mailhog_url: "http://mail-relay.internal:8025/"
+trainee_workstation_welcome_note:
+  title: "Phishing Attack Training Scenario"
+  body: |
+    Welcome to PUC2-Sub Case 2a: Phishing Attack Training Scenario.
+
+    Your learning portal:  http://lms.internal:8080/
+    Your simulated inbox:  http://mail-relay.internal:8025/
+
+    Follow the course modules before starting the practical exercise.
+    Report any suspicious emails using the form in the LMS portal.

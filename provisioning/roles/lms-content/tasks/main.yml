@@ -1,0 +1,60 @@
+---
+# nginx is already installed by the rep-core role on rep-practical-labs.
+# This role only adds a new virtual host on port 8080 and deploys course content.
+
+- name: Create LMS web root directory
+  ansible.builtin.file:
+    path: "{{ lms_content_web_root }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Create LMS course subdirectories
+  ansible.builtin.file:
+    path: "{{ lms_content_web_root }}/{{ item }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+  loop:
+    - module1
+    - module2
+    - module3
+
+- name: Deploy LMS course portal index page
+  ansible.builtin.template:
+    src: course-index.html.j2
+    dest: "{{ lms_content_web_root }}/index.html"
+    owner: www-data
+    group: www-data
+    mode: "0644"
+  notify: reload nginx lms
+
+- name: Deploy LMS nginx virtual host configuration
+  ansible.builtin.template:
+    src: nginx-lms.conf.j2
+    dest: "{{ lms_content_nginx_site }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload nginx lms
+
+- name: Enable LMS nginx site
+  ansible.builtin.file:
+    src: "{{ lms_content_nginx_site }}"
+    dest: "{{ lms_content_nginx_site_enabled }}"
+    state: link
+  notify: reload nginx lms
+
+- name: Apply pending nginx reloads
+  ansible.builtin.meta: flush_handlers
+
+- name: Validate LMS portal is responding
+  ansible.builtin.uri:
+    url: "{{ lms_content_healthcheck.url }}"
+    method: GET
+    status_code: "{{ lms_content_healthcheck.status_code }}"
+  changed_when: false
+  retries: 3
+  delay: 3

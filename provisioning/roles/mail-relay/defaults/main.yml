@@ -1,0 +1,9 @@
+---
+mail_relay_compose_dir: /opt/mail-relay
+mail_relay_docker_image: mailhog/mailhog:latest
+mail_relay_smtp_port: 1025
+mail_relay_ui_port: 8025
+mail_relay_healthcheck:
+  url: http://127.0.0.1:{{ mail_relay_ui_port }}/api/v1/messages
+  status_code: 200
+  timeout: 30

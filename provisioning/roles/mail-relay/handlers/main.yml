@@ -1,0 +1,6 @@
+---
+- name: restart mailhog
+  ansible.builtin.command:
+    cmd: docker compose restart mailhog
+    chdir: "{{ mail_relay_compose_dir }}"
+  listen: restart mailhog

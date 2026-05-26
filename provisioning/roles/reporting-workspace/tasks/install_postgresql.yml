@@ -1,0 +1,51 @@
+---
+- name: Install PostgreSQL and Python bindings
+  ansible.builtin.apt:
+    name:
+      - postgresql
+      - postgresql-contrib
+    state: present
+    update_cache: true
+
+- name: Ensure PostgreSQL service is started and enabled
+  ansible.builtin.service:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Create REP reporting database
+  ansible.builtin.command:
+    cmd: >-
+      psql -c
+      "CREATE DATABASE {{ reporting_workspace_datasources[0].database }};"
+  become_user: postgres
+  register: pg_create_db
+  changed_when: "'CREATE DATABASE' in pg_create_db.stdout"
+  failed_when:
+    - pg_create_db.rc != 0
+    - "'already exists' not in pg_create_db.stderr"
+
+- name: Create REP reporting user
+  ansible.builtin.command:
+    cmd: >-
+      psql -c
+      "DO $$
+       BEGIN
+         IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{{ reporting_workspace_datasources[0].user }}') THEN
+           CREATE USER {{ reporting_workspace_datasources[0].user }}
+             WITH PASSWORD '{{ reporting_workspace_datasources[0].secureJsonData.password }}';
+         END IF;
+       END
+       $$;"
+  become_user: postgres
+  changed_when: false
+  no_log: true
+
+- name: Grant reporting user privileges on reporting database
+  ansible.builtin.command:
+    cmd: >-
+      psql -c
+      "GRANT ALL PRIVILEGES ON DATABASE {{ reporting_workspace_datasources[0].database }}
+       TO {{ reporting_workspace_datasources[0].user }};"
+  become_user: postgres
+  changed_when: false

@@ -1,0 +1,160 @@
+---
+- name: Install Docker prerequisites
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+    state: present
+    update_cache: true
+
+- name: Ensure /etc/apt/keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add Docker official GPG key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+
+- name: Add Docker apt repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc]
+      https://download.docker.com/linux/ubuntu
+      {{ ansible_distribution_release }} stable
+    filename: docker
+    state: present
+    update_cache: true
+
+- name: Install Docker engine and Compose plugin
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+
+- name: Ensure Docker service is running and enabled
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Create GoPhish compose directory
+  ansible.builtin.file:
+    path: "{{ phishing_simulator_compose_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Deploy GoPhish configuration (TLS disabled for lab)
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: "{{ phishing_simulator_compose_dir }}/config.json"
+    owner: root
+    group: root
+    mode: "0640"
+  notify: restart gophish
+
+- name: Deploy GoPhish Docker Compose definition
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ phishing_simulator_compose_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0640"
+  notify: restart gophish
+
+- name: Apply pending GoPhish configuration restarts
+  ansible.builtin.meta: flush_handlers
+
+- name: Start GoPhish service
+  ansible.builtin.command:
+    cmd: docker compose up -d
+    chdir: "{{ phishing_simulator_compose_dir }}"
+  register: gophish_start
+  changed_when: "'Started' in gophish_start.stdout or 'Created' in gophish_start.stdout"
+
+- name: Wait for GoPhish admin port to become available
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ phishing_simulator_healthcheck.port }}"
+    timeout: "{{ phishing_simulator_healthcheck.timeout }}"
+    sleep: 2
+
+# First-run only: extract initial credentials and pre-configure the platform.
+# On re-provisioning the credentials file already exists, so these tasks are skipped.
+- name: Check whether GoPhish has already been initialised
+  ansible.builtin.stat:
+    path: "{{ phishing_simulator_compose_dir }}/admin_credentials.txt"
+  register: gophish_creds_stat
+
+- name: Wait for GoPhish to emit initial admin credentials in logs
+  ansible.builtin.shell:
+    cmd: >-
+      docker logs gophish 2>&1
+      | grep -i 'Please login'
+      | sed 's/.*password //'
+      | tr -d '"' | tr -d "'" | tr -d ' '
+      | tail -1
+  register: gophish_init_pass
+  retries: 18
+  delay: 5
+  until: gophish_init_pass.stdout | trim | length > 0
+  changed_when: false
+  no_log: true
+  when: not gophish_creds_stat.stat.exists
+
+- name: Save GoPhish admin credentials for instructor reference
+  ansible.builtin.copy:
+    content: |
+      GoPhish Admin Panel
+      ===================
+      URL:      http://{{ ansible_host }}:{{ phishing_simulator_admin_port }}/
+      Username: admin
+      Password: {{ gophish_init_pass.stdout | trim }}
+
+      IMPORTANT: Change this password after first login.
+      The password above is valid only until the instructor changes it via the UI.
+    dest: "{{ phishing_simulator_compose_dir }}/admin_credentials.txt"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when: not gophish_creds_stat.stat.exists
+
+# Pre-configure MailHog SMTP sending profile so campaigns can be launched
+# immediately after the instructor logs in. 409 = profile already exists.
+- name: Pre-configure MailHog SMTP sending profile in GoPhish
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ phishing_simulator_admin_port }}/api/smtp/"
+    method: POST
+    user: admin
+    password: "{{ gophish_init_pass.stdout | trim }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      name: "MailHog Lab Relay"
+      host: "{{ phishing_simulator_smtp_host }}:{{ phishing_simulator_smtp_port }}"
+      from_address: "{{ phishing_simulator_from_address }}"
+      ignore_cert_errors: true
+      headers: []
+    status_code: [201, 409]
+  no_log: true
+  when: not gophish_creds_stat.stat.exists
+
+# Deploy phishing email HTML template file (used as reference; instructor
+# imports it via GoPhish UI at Admin → Email Templates → Import Email).
+- name: Deploy phishing email template reference file
+  ansible.builtin.template:
+    src: phishing-email.html.j2
+    dest: "{{ phishing_simulator_compose_dir }}/phishing_email_template.html"
+    owner: root
+    group: root
+    mode: "0644"
