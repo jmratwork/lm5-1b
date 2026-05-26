@@ -1,67 +1,92 @@
-# incidentresponse-crcz
+# lm8-1a — PUC2-Sub Case 2a: Phishing Attack Training Scenario
 
-This repository gathers only the materials required to run the practical exercises of the **CyberRangeCZ** initiative. It does not include generic infrastructure or dependencies from the KYPO/CRCZ laboratory; every asset focuses on the operational workflow currently validated for CYNET subcase 1a of the architecture diagram.
+This repository contains all the materials required to run the practical exercises of
+**PUC2-Sub Case 2a** on the **CyberRangeCZ** platform. The scenario trains staff to
+identify phishing campaigns through a self-paced hands-on educational platform.
 
-## Scope of the exercises
+## Scenario overview
 
-- **Subcase 1a – Instructor-led training**: outlines the educational dynamic involving the instructor, the Random Education Platform (REP) and the participants.
+Staff members undergo comprehensive training in identifying phishing campaigns.
+The Training Instructor develops self-paced courses focused on recognising phishing
+techniques. Trainees access the platform and engage in practical exercises designed
+to assess their ability to:
 
-The detailed flow is summarised below to facilitate reproduction during the practical sessions.
+- Scrutinise sender information for inconsistencies
+- Analyse email content for red flags (grammatical errors, urgent requests)
+- Verify attachments for legitimacy
+- Report suspicious emails using organisational protocols
 
-See Figure 6 for the complete CYNET activity diagram.
+Upon completion, trainees receive evaluation feedback including scores and suggestions
+for further learning.
 
-![Figure 6: CYNET Activity Diagram](docs/figures/cynet-activity.png)
+## Training flow (3 phases, 8 steps)
 
-*Figure 6. Activity diagram illustrating how the CYNET platform canalises the instructor-led sequence for subcase 1a.*
+See the UML sequence diagram for the full actor interaction. In brief:
 
-## Subcase 1a flow
+| Phase | Steps | Description |
+|-------|-------|-------------|
+| **Training setup** | 1–2 | Instructor creates self-paced phishing courses and publishes content |
+| **Trainee executes scenario** | 3–4 | Trainee launches phishing module; platform delivers simulated phishing emails/pages |
+| **Assessment & feedback** | 5–8 | Trainee performs detection; platform scores, delivers feedback, reports cohort metrics to instructor |
 
-1. **Instructor preparation**
-   - The instructor reviews the exercise guide and configures the session in the REP with the modules that match the topic of the day.
-   - Collaborative tools (chat, videoconferencing, digital whiteboard) that accompany the session are enabled.
-2. **Session on the Random Education Platform (REP)**
-   - The instructor starts broadcasting the content and shares the objectives.
-   - The REP automatically assigns each participant a personalised itinerary that combines short theory, simulated scenarios and reminders of good practice.
-3. **Formative quizzes for trainees**
-   - Trainees complete interactive quizzes in the REP to validate immediate understanding.
-   - The instructor monitors the results in real time and provides targeted feedback.
-4. **Assessed practical tests**
-   - The REP generates supervised practical exercises (virtual labs or short challenges).
-   - The results are recorded and consolidated into a report that the instructor reviews with the group during the final feedback.
+The complete step-by-step definition is in `training_linear.json`.
 
 ## Key files
 
-- `training_linear.json`: lists the learning modules for subcase 1a, including step-by-step activities and the tools involved.
-- `topology.yml`: describes the CyberRangeCZ components relevant to the exercises and how they integrate with the educational and operational tooling.
-- `docs/`: support materials and complementary guides. `docs/provisioning-guide.md` explains how to deploy the infrastructure required for subcase 1a.
-- `inventory.sample`: template inventory with placeholder credentials; load secrets at runtime via Ansible Vault or environment variables instead of committing them to version control.
-- `provisioning/`: KYPO/CRCZ topology files and Ansible playbooks that replicate the infrastructure defined in the CYNET activity diagram for the 1a flow.
+| File / directory | Purpose |
+|-----------------|---------|
+| `topology.yml` | CyberRangeCZ sandbox topology (hosts, networks, router mappings) |
+| `training_linear.json` | Learning sequence — 3 phases, 8 steps, actors, tools, success criteria |
+| `provisioning/playbook.yml` | Main Ansible playbook orchestrating all roles |
+| `provisioning/roles/` | Ansible roles for each platform component |
+| `provisioning/case-2a/` | Scenario-specific topology and helper scripts |
+| `docs/subcase-2a-phishing-training.md` | Detailed deployment and operational guide |
+| `group_vars/trainees.yml` | Shared variables for trainee workstations |
+| `inventory.sample` | Inventory template — load secrets via Ansible Vault or environment variables |
+
+## Infrastructure summary
+
+| Component | Host | IP | Technology |
+|-----------|------|----|-----------|
+| LMS course portal | rep-practical-labs | 10.20.10.40 | Nginx (port 8080) |
+| Phishing simulator | phishing-simulator | 10.20.10.50 | GoPhish (Docker) |
+| Mail relay | mail-relay | 10.20.10.60 | MailHog (Docker) |
+| Instructor console | instructor-console | 10.20.20.10 | Ubuntu + tmux |
+| Trainee workstations | trainee-workstation-01/02 | 10.20.20.50–60 | Windows 10 |
+| Reporting dashboard | reporting-workspace | 10.20.30.10 | Grafana + PostgreSQL |
+
+See `docs/subcase-2a-phishing-training.md` for the full architecture description and
+first-run checklist.
+
+![CYNET Activity Diagram](docs/figures/cynet-activity.png)
+
+## Deploying
+
+```bash
+# 1. Copy and fill the inventory
+cp inventory.sample inventory.ini
+# Edit inventory.ini with real host addresses and credentials
+
+# 2. Run the provisioning playbook
+provisioning/run_playbook.sh inventory.ini
+```
+
+See `docs/subcase-2a-phishing-training.md` for prerequisites and step-by-step instructions.
 
 ## Validating the repository
-
-Basic structural checks are provided to confirm that the learning sequence and topology descriptors stay consistent. Install the development dependencies and run the automated validation suite with:
 
 ```bash
 pip install -r requirements-dev.txt
 pytest
 ```
 
-The tests verify that:
-
-- `training_linear.json` follows the expected layout, with sequential steps and non-empty metadata for each activity.
-- `topology.yml` only references components defined within the document.
-- The KYPO topology in `provisioning/` references valid hosts, routers and networks in its mapping sections.
-
-## Binary assets and diagram contributions
-
-- Keep versioned binary assets to a minimum. Only instructional diagrams that are documented in `docs/figures/` should be committed; all other binaries should be supplied through external links or via Git LFS if your workflow allows it.
-- Preferred diagram formats are **PNG** and **SVG** generated from source files so they remain reproducible. Avoid uploading screenshots or raster captures—especially those containing sensitive environments—to git history.
-- If you need to share a one-off artifact (e.g., a capture or large archive), attach it through your collaboration platform instead of committing it to the repository.
-- A local pre-commit hook is provided to block accidental commits of disallowed binary extensions and to enforce that new PNG/SVG files live under `docs/figures/`. Install it with `pip install pre-commit` and run `pre-commit install` before committing changes.
+The tests verify that `training_linear.json` is structurally valid and sequential,
+and that the topology files only reference defined hosts, networks, and routers.
 
 ## Credential management
 
-Before executing Ansible playbooks, replace the password placeholders in `inventory.sample` by referencing secrets stored in Ansible Vault files or exported through environment variables. This keeps sensitive credentials out of the repository while preserving a working inventory template for the exercises.
+Replace password placeholders in `inventory.sample` using Ansible Vault files or
+exported environment variables. Never commit real credentials to the repository.
 
 ## Licence
 

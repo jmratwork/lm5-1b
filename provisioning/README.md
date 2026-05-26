@@ -1,85 +1,102 @@
-# Subcase 1a – Provisioning guide
+# Provisioning — PUC2-Sub Case 2a
 
-The playbooks in this directory prepare the infrastructure required by the phishing awareness exercises delivered on the Random Education Platform (REP).
+The playbooks and roles in this directory deploy the infrastructure required by the
+Phishing Attack Training Scenario on CyberRangeCZ.
 
 ## Host groups
 
 | Inventory group | Hosts | Purpose |
-| --- | --- | --- |
-| `rep_core` | `rep-scheduler`, `rep-live-session`, `rep-quiz-engine`, `rep-practical-labs` | Backend services that coordinate course scheduling, live delivery, quizzes and practical labs. |
-| `reporting_workspace` | `reporting-workspace` | Dashboards and report consolidation workspace. |
-| `instructor_console` | `instructor-console` | Entry point for instructors to manage the live session. |
-| `trainees` | `trainee-workstation-01`, `trainee-workstation-02` | Windows workstations used by participants during the labs. |
+|----------------|-------|---------|
+| `rep_core` | `rep-scheduler`, `rep-live-session`, `rep-quiz-engine`, `rep-practical-labs` | REP backend microservices (nginx reverse proxy per node) |
+| `lms_content` | `rep-practical-labs` | LMS course portal — Nginx virtual host on port 8080 |
+| `phishing_simulator` | `phishing-simulator` | GoPhish phishing simulation platform (Docker) |
+| `mail_relay` | `mail-relay` | MailHog sandboxed SMTP relay (Docker) |
+| `reporting_workspace` | `reporting-workspace` | Grafana dashboards + PostgreSQL |
+| `instructor_console` | `instructor-console` | Instructor terminal with tmux and browser shortcuts |
+| `trainees` | `trainee-workstation-01`, `trainee-workstation-02` | Windows 10 workstations with REP Collector agent |
 
 ## Requirements
 
-- System utilities: `wget` and `virtualbmc` installed on the control node. Example installation commands:
+- Ansible 2.15 or newer
+- `pywinrm` Python package for WinRM connectivity to Windows hosts
+  (`pip install "pywinrm[credssp]"` when CredSSP is required)
+- Network reachability to all hosts in `provisioning/case-2a/topology.yml`
+- Credentials via Ansible Vault or environment variables (see `inventory.sample`)
 
-  ```bash
-  sudo apt-get update
-  sudo apt-get install -y wget
-  python3 -m pip install --upgrade pip
-  python3 -m pip install virtualbmc
-  ```
-
-- Ansible 2.15 or newer plus the `pywinrm` Python package for WinRM connectivity (use `pywinrm[credssp]` when the scenario requires CredSSP).
-- Network reachability towards the hosts defined in `provisioning/case-1a/topology.yml`.
-- Credentials provided through Ansible Vault files or environment variables (see `inventory.sample`).
-
-> **KYPO/CRCZ note:** running `ansible-playbook` directly is unsupported because the control node does not ship with the
-> required Ansible collections. Always execute `provisioning/run_playbook.sh`, which installs dependencies and launches the
-> playbook. If you must call `ansible-playbook` manually (e.g. for debugging), run
-> `ansible-galaxy collection install -r provisioning/collections.yml` first.
+> **KYPO/CRCZ note:** always use `provisioning/run_playbook.sh` rather than calling
+> `ansible-playbook` directly; the wrapper installs required collections first.
 
 ## Running the playbook
 
-1. Export sensitive variables or prepare an Ansible Vault file that contains the required passwords.
-2. Copy `inventory.sample` to `inventory.ini` (or keep the `.sample` file) and adjust the host addresses if necessary.
-3. Execute the site playbook:
-
 ```bash
+# 1. Export credentials or prepare an Ansible Vault file
+export ANSIBLE_PASSWORD_PHISHING_SIMULATOR='...'
+
+# 2. Copy and adjust the inventory
+cp inventory.sample inventory.ini
+
+# 3. Run
 provisioning/run_playbook.sh inventory.ini
 ```
 
-> **Trainee inventory note:** keep trainee hosts under the `trainees` group so the
-> collector token override in `group_vars/trainees.yml` is applied. If you use a
-> different grouping, duplicate
-> `trainee_workstation_collector.ingestion_pipeline.transports[].token` in the
-> relevant inventory or group variables file.
+## Role reference
 
-The wrapper installs `ansible.windows` and `community.general` from `provisioning/collections.yml` before running `provisioning/playbook.yml`, ensuring the Windows modules resolve correctly on KYPO/CRCZ environments.
+### `rep-core`
+Installs Nginx as a reverse proxy for each REP backend microservice. Key variables:
+`rep_core_tls_enabled`, `rep_core_virtual_host`, `rep_core_shared_secret`.
+TLS is disabled by default for lab environments.
 
-## Role functional requirements
+### `lms-content`
+Adds a second Nginx virtual host (port 8080) on `rep-practical-labs` serving the
+self-paced phishing awareness course. The web root is `/srv/lms/`. Update course
+content by editing files there directly or re-running the role.
 
-### `rep_core`
-- **Service:** publishes the REP platform behind Nginx with load balancing towards the `scheduler`, `live_session` and `quiz_engine` microservices.
-- **Configuration:** the `templates/nginx-rep-core.conf.j2` file renders the virtual host and the upstreams defined in `defaults/main.yml` (`rep_core_virtual_host` and `rep_core_tls`). It also protects a shared secret stored in `rep_core_shared_secret_file`.
-- **Key variables:** `rep_core_tls_enabled`, `rep_core_virtual_host.*`, `rep_core_tls.*`, `rep_core_shared_secret` and `rep_core_healthcheck` describe routes, certificates and health checks.
-- **TLS toggle:** set `rep_core_tls_enabled: true` and provide certificate/key material via `rep_core_tls.certificate_content` and `rep_core_tls.key_content` (or copy files out-of-band) to publish HTTPS on port 443. For lab or demo runs you can keep `rep_core_tls_enabled: false` to serve plain HTTP on port 80 and skip certificate distribution and HTTPS health checks.
-- **Validation:** `tasks/main.yml` runs `nginx -t` and, when TLS is enabled, an `ansible.builtin.uri` call to the `healthcheck_path`, raising an error if the HTTP code differs from the expected value.
+### `phishing-simulator`
+Deploys GoPhish via Docker Compose on the `phishing-simulator` host.
+- Admin panel: `http://phishing-simulator.internal:3333/`
+- Phishing pages: `http://phishing-simulator.internal/`
+- Pre-configures the MailHog SMTP sending profile on first run.
+- Initial admin credentials are saved to `/opt/phishing-simulator/admin_credentials.txt`.
 
-### `reporting_workspace`
-- **Service:** provisions Grafana with PostgreSQL data sources and dashboards to monitor the exercise.
-- **Configuration:** the `grafana.ini.j2`, `datasources.yaml.j2`, `dashboards.yaml.j2` and `dashboard.json.j2` templates generate the Grafana configuration and the dashboards listed in `reporting_workspace_dashboards`.
-- **Key variables:** `reporting_workspace_datasources`, `reporting_workspace_dashboards`, `reporting_workspace_grafana_ini`, `reporting_workspace_grafana_repositories` and `reporting_workspace_healthcheck` allow you to parameterise ports, repositories, dashboards and checks.
-- **Validation:** after applying the templates the role issues a `GET {{ reporting_workspace_healthcheck.url }}` request and expects `database == 'ok'`.
+Key variables: `phishing_simulator_admin_port`, `phishing_simulator_phishing_port`,
+`phishing_simulator_smtp_host`, `phishing_simulator_from_address`.
 
-### `instructor_console`
-- **Service:** prepares the instructor's terminal with predefined `tmux` sessions and shell shortcuts to the critical services.
-- **Configuration:** `tmux.conf.j2` and `instructor-console.sh.j2` translate `instructor_console_tmux_settings` and `instructor_console_shortcuts` into files in `$HOME` and `/etc/profile.d`.
-- **Key variables:** `instructor_console_user`, `instructor_console_workspace`, `instructor_console_tmux_settings` and `instructor_console_shortcuts`.
-- **Default shortcuts:** `launch_scheduler` (`ssh rep-scheduler`), `launch_quiz_dashboard` (Firefox to the quiz dashboard) and `open_ticket_queue` (`ssh ng-soc` to reach the SOC ticket queue host defined in `inventory.sample`).
-- **Validation:** the role runs `tmux -f … display-message` and a `bash -lc` command to verify that the shortcuts are registered as functions.
+### `mail-relay`
+Deploys MailHog via Docker Compose on the `mail-relay` host.
+- SMTP: port 1025 (used by GoPhish as outbound relay)
+- WebUI: `http://mail-relay.internal:8025/` (trainee inbox)
 
-### `trainee_workstation`
-- **Service:** distributes the REP Collector agent configuration, the shortcuts on participants' Windows desktops and the lab welcome message.
-- **Configuration:** `ansible.windows.win_template` renders `collector.yaml` and the `.url` shortcuts described in `trainee_workstation_shortcuts`, while `ansible.windows.win_copy` publishes the `WELCOME.txt` note in `{{ trainee_workstation_welcome_note.directory }}`.
-- **Key variables:** `trainee_workstation_collector.*` (path, service and transports), `trainee_workstation_shortcuts` and `trainee_workstation_welcome_note.*` (directory, name and message content).
-- **Service wrapper source:** override `trainee_workstation_service_wrapper_url` when pulling `nssm-2.24.zip` from a remote location and adjust `trainee_workstation_service_wrapper_extract_path` when changing the extraction directory. Set `trainee_workstation_service_wrapper_arch` to `win32` for 32-bit hosts to place `nssm.exe` under the correct architecture directory.
-- **Validation:** the service state is checked with `Get-Service` and restarts automatically if the templates change.
+All emails stay inside the sandbox — nothing reaches the internet.
 
-## Parameterisation and checks
+### `reporting-workspace`
+Installs PostgreSQL and Grafana on `reporting-workspace`.
+- Grafana dashboard: `http://reporting.internal:3000/`
+- PostgreSQL database `rep_reporting` is created automatically.
 
-Each role exposes its default configuration in `roles/<role>/defaults/main.yml`. Adjust those variables in the inventory, `group_vars` or `-e` parameters to customise hosts, certificates, ingestion targets or shortcuts without modifying the templates.
+Key variables: `reporting_workspace_datasources`, `reporting_workspace_dashboards`.
 
-The `tasks/main.yml` file for each role applies the configuration idempotently via `ansible.builtin.template`/`ansible.windows.win_template` and registers handlers to restart services when required. The final tasks include post-configuration verifications (HTTP checks, `nginx -t`, `tmux`, `Get-Service`, etc.) with explicit `failed_when` conditions so execution stops if the services do not respond as expected.
+### `instructor-console`
+Configures the instructor's Ubuntu workstation with tmux sessions and shell
+shortcuts. Default shortcuts open GoPhish, MailHog, the LMS portal, and Grafana.
+Key variables: `instructor_console_shortcuts`, `instructor_console_tmux_settings`.
+
+### `trainee-workstation`
+Deploys the REP Collector agent (PowerShell service) and a welcome note on each
+Windows workstation. Key variables: `trainee_workstation_collector.*`,
+`trainee_workstation_welcome_note`.
+
+### `windows`
+Basic Windows OS hardening: disables automatic updates, enables RDP and WinRM,
+adjusts firewall rules. Always applied before `trainee-workstation`.
+
+## Helper scripts
+
+| Script | Purpose |
+|--------|---------|
+| `case-2a/scripts/export_gophish_results.sh` | Export campaign results via GoPhish REST API to JSON |
+| `case-2a/scripts/examples/campaign-config.json` | Example GoPhish campaign payload |
+
+## Parameterisation
+
+All roles expose defaults in `roles/<role>/defaults/main.yml`. Override them in
+`group_vars/`, `host_vars/`, or with `-e` on the command line without editing templates.
