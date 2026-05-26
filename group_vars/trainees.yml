@@ -1,16 +1,22 @@
 ---
-trainee_workstation_collector_ingestion_token: rep-core-trainee-collector-7b92de11
+# PUC2-Sub Case 2b: variables shared across pentest workstations
+pentest_tools_target_range: "10.20.40.0/24"
+pentest_tools_target_host: "10.20.40.10"
+pentest_tools_results_dir: /opt/pentest/results
+pentest_tools_workspace: /opt/pentest
 
-# PUC2-Sub Case 2a: URLs exposed to trainee workstations
-trainee_workstation_lms_url: "http://lms.internal:8080/"
-trainee_workstation_mailhog_url: "http://mail-relay.internal:8025/"
-trainee_workstation_welcome_note:
-  title: "Phishing Attack Training Scenario"
+pentest_workstation_lms_url: "http://lms.internal:8080/"
+pentest_workstation_gitea_url: "http://report-repo.internal:3000/"
+pentest_workstation_reporting_url: "http://reporting.internal:3000/"
+
+pentest_workstation_welcome_note:
+  title: "Network Vulnerability Identification Training"
   body: |
-    Welcome to PUC2-Sub Case 2a: Phishing Attack Training Scenario.
+    Welcome to PUC2-Sub Case 2b: Network Vulnerability Identification Training.
 
-    Your learning portal:  http://lms.internal:8080/
-    Your simulated inbox:  http://mail-relay.internal:8025/
+    Your learning portal:     http://lms.internal:8080/
+    Your report repository:   http://report-repo.internal:3000/
+    Target network range:     10.20.40.0/24
 
-    Follow the course modules before starting the practical exercise.
-    Report any suspicious emails using the form in the LMS portal.
+    Complete all three theory modules before starting the practical exercise.
+    Submit your vulnerability report to your Gitea repository when finished.

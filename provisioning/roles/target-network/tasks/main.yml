@@ -1,0 +1,86 @@
+---
+- name: Install Docker prerequisites
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: true
+
+- name: Add Docker GPG key
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu noble stable"
+    state: present
+    update_cache: true
+
+- name: Install Docker Engine and Compose plugin
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+
+- name: Enable and start Docker service
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Create target network compose directory
+  ansible.builtin.file:
+    path: "{{ target_network_compose_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy Docker Compose file for vulnerable services
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ target_network_compose_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart target network services
+
+- name: Pull Docker images
+  ansible.builtin.command:
+    cmd: docker compose -f {{ target_network_compose_file }} pull
+  changed_when: true
+
+- name: Start vulnerable services
+  ansible.builtin.command:
+    cmd: docker compose -f {{ target_network_compose_file }} up -d
+  changed_when: true
+
+- name: Wait for DVWA to be reachable
+  ansible.builtin.uri:
+    url: "{{ target_network_healthcheck.url }}"
+    status_code: "{{ target_network_healthcheck.status_code }}"
+    timeout: "{{ target_network_healthcheck.timeout }}"
+  register: dvwa_health
+  until: dvwa_health.status == target_network_healthcheck.status_code
+  retries: "{{ target_network_healthcheck.retries }}"
+  delay: "{{ target_network_healthcheck.delay }}"
+
+- name: Configure weak-credential SSH user
+  ansible.builtin.user:
+    name: "{{ target_network_ssh_weak_user }}"
+    password: "{{ target_network_ssh_weak_password | password_hash('sha512') }}"
+    shell: /bin/bash
+    create_home: true
+
+- name: Allow password authentication in SSH (lab only)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PasswordAuthentication"
+    line: "PasswordAuthentication yes"
+  notify: restart sshd

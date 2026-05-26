@@ -1,0 +1,17 @@
+---
+report_repository_compose_dir: /opt/report-repository
+report_repository_compose_file: /opt/report-repository/docker-compose.yml
+report_repository_data_dir: /opt/report-repository/data
+report_repository_http_port: 3000
+report_repository_ssh_port: 2222
+report_repository_admin_user: gitea-admin
+report_repository_admin_password: "CyberRange2b!"
+report_repository_admin_email: "admin@cyberrange.internal"
+report_repository_org_name: cyberrange-2b
+report_repository_trainee_repo_prefix: vuln-report
+report_repository_healthcheck:
+  url: "http://127.0.0.1:{{ report_repository_http_port }}/api/v1/version"
+  status_code: 200
+  timeout: 90
+  retries: 15
+  delay: 6

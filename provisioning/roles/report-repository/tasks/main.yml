@@ -1,0 +1,103 @@
+---
+- name: Install Docker prerequisites
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: true
+
+- name: Add Docker GPG key
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu noble stable"
+    state: present
+    update_cache: true
+
+- name: Install Docker Engine and Compose plugin
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+
+- name: Enable and start Docker service
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Create Gitea directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ report_repository_compose_dir }}"
+    - "{{ report_repository_data_dir }}"
+
+- name: Deploy Docker Compose file for Gitea
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ report_repository_compose_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart gitea
+
+- name: Pull Gitea Docker image
+  ansible.builtin.command:
+    cmd: docker compose -f {{ report_repository_compose_file }} pull
+  changed_when: true
+
+- name: Start Gitea service
+  ansible.builtin.command:
+    cmd: docker compose -f {{ report_repository_compose_file }} up -d
+  changed_when: true
+
+- name: Wait for Gitea API to be ready
+  ansible.builtin.uri:
+    url: "{{ report_repository_healthcheck.url }}"
+    status_code: "{{ report_repository_healthcheck.status_code }}"
+    timeout: "{{ report_repository_healthcheck.timeout }}"
+  register: gitea_health
+  until: gitea_health.status == report_repository_healthcheck.status_code
+  retries: "{{ report_repository_healthcheck.retries }}"
+  delay: "{{ report_repository_healthcheck.delay }}"
+
+- name: Create Gitea admin user
+  ansible.builtin.command:
+    cmd: >
+      docker compose -f {{ report_repository_compose_file }} exec -T gitea
+      gitea admin user create
+      --username {{ report_repository_admin_user }}
+      --password {{ report_repository_admin_password }}
+      --email {{ report_repository_admin_email }}
+      --admin
+  register: gitea_admin_create
+  changed_when: "'created' in gitea_admin_create.stdout"
+  failed_when:
+    - gitea_admin_create.rc != 0
+    - "'already exists' not in gitea_admin_create.stderr"
+
+- name: Create CyberRange organisation in Gitea
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ report_repository_http_port }}/api/v1/orgs"
+    method: POST
+    user: "{{ report_repository_admin_user }}"
+    password: "{{ report_repository_admin_password }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      username: "{{ report_repository_org_name }}"
+      visibility: private
+    status_code: [201, 422]

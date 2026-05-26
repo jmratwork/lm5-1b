@@ -1,0 +1,5 @@
+---
+- name: restart gitea
+  ansible.builtin.command:
+    cmd: docker compose -f {{ report_repository_compose_file }} restart
+  changed_when: true

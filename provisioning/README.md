@@ -1,26 +1,24 @@
-# Provisioning — PUC2-Sub Case 2a
+# Provisioning — PUC2-Sub Case 2b
 
 The playbooks and roles in this directory deploy the infrastructure required by the
-Phishing Attack Training Scenario on CyberRangeCZ.
+Network Vulnerability Identification Training scenario on CyberRangeCZ.
 
 ## Host groups
 
 | Inventory group | Hosts | Purpose |
 |----------------|-------|---------|
 | `rep_core` | `rep-scheduler`, `rep-live-session`, `rep-quiz-engine`, `rep-practical-labs` | REP backend microservices (nginx reverse proxy per node) |
-| `lms_content` | `rep-practical-labs` | LMS course portal — Nginx virtual host on port 8080 |
-| `phishing_simulator` | `phishing-simulator` | GoPhish phishing simulation platform (Docker) |
-| `mail_relay` | `mail-relay` | MailHog sandboxed SMTP relay (Docker) |
-| `reporting_workspace` | `reporting-workspace` | Grafana dashboards + PostgreSQL |
 | `instructor_console` | `instructor-console` | Instructor terminal with tmux and browser shortcuts |
-| `trainees` | `trainee-workstation-01`, `trainee-workstation-02` | Windows 10 workstations with REP Collector agent |
+| `pentest_workstations` | `pentest-workstation-01`, `pentest-workstation-02` | Ubuntu workstations with Nmap and pentest scripts |
+| `target_servers` | `target-server` | Vulnerable services: DVWA (port 80) + weak SSH (port 22) |
+| `reporting_workspace` | `reporting-workspace` | Grafana dashboards + PostgreSQL |
+| `report_repositories` | `report-repository` | Gitea report repository (Docker, port 3000) |
 
 ## Requirements
 
 - Ansible 2.15 or newer
-- `pywinrm` Python package for WinRM connectivity to Windows hosts
-  (`pip install "pywinrm[credssp]"` when CredSSP is required)
-- Network reachability to all hosts in `provisioning/case-2a/topology.yml`
+- `community.general` and `community.docker` collections (see `collections.yml`)
+- Network reachability to all hosts in `provisioning/case-2b/topology.yml`
 - Credentials via Ansible Vault or environment variables (see `inventory.sample`)
 
 > **KYPO/CRCZ note:** always use `provisioning/run_playbook.sh` rather than calling
@@ -30,7 +28,8 @@ Phishing Attack Training Scenario on CyberRangeCZ.
 
 ```bash
 # 1. Export credentials or prepare an Ansible Vault file
-export ANSIBLE_PASSWORD_PHISHING_SIMULATOR='...'
+export ANSIBLE_PASSWORD_TARGET='...'
+export ANSIBLE_PASSWORD_REPORT_REPO='...'
 
 # 2. Copy and adjust the inventory
 cp inventory.sample inventory.ini
@@ -48,53 +47,53 @@ TLS is disabled by default for lab environments.
 
 ### `lms-content`
 Adds a second Nginx virtual host (port 8080) on `rep-practical-labs` serving the
-self-paced phishing awareness course. The web root is `/srv/lms/`. Update course
-content by editing files there directly or re-running the role.
+self-paced network vulnerability identification course. Three modules cover:
+network reconnaissance (Nmap), vulnerability scanning and CVSS classification, and
+report writing. Web root: `/srv/lms/`.
 
-### `phishing-simulator`
-Deploys GoPhish via Docker Compose on the `phishing-simulator` host.
-- Admin panel: `http://phishing-simulator.internal:3333/`
-- Phishing pages: `http://phishing-simulator.internal/`
-- Pre-configures the MailHog SMTP sending profile on first run.
-- Initial admin credentials are saved to `/opt/phishing-simulator/admin_credentials.txt`.
+### `target-network`
+Deploys vulnerable services via Docker Compose on `target-server` (10.20.40.10):
+- **DVWA** (Damn Vulnerable Web Application) on port 80 — web application vulnerabilities
+- **Weak-credential SSH** on port 22 — misconfigured authentication (labuser / Password123)
 
-Key variables: `phishing_simulator_admin_port`, `phishing_simulator_phishing_port`,
-`phishing_simulator_smtp_host`, `phishing_simulator_from_address`.
+Key variables: `target_network_dvwa_port`, `target_network_ssh_weak_user`,
+`target_network_ssh_weak_password`, `target_network_dvwa_db_password`.
 
-### `mail-relay`
-Deploys MailHog via Docker Compose on the `mail-relay` host.
-- SMTP: port 1025 (used by GoPhish as outbound relay)
-- WebUI: `http://mail-relay.internal:8025/` (trainee inbox)
+### `report-repository`
+Deploys Gitea via Docker Compose on `report-repository` (10.20.30.20).
+- Web UI: `http://report-repo.internal:3000/`
+- SSH port: 2222
+- Creates the `cyberrange-2b` organisation automatically on first run.
 
-All emails stay inside the sandbox — nothing reaches the internet.
+Key variables: `report_repository_http_port`, `report_repository_admin_user`,
+`report_repository_admin_password`, `report_repository_org_name`.
 
 ### `reporting-workspace`
-Installs PostgreSQL and Grafana on `reporting-workspace`.
+Installs PostgreSQL and Grafana on `reporting-workspace` (10.20.30.10).
 - Grafana dashboard: `http://reporting.internal:3000/`
-- PostgreSQL database `rep_reporting` is created automatically.
+- Dashboard: `Network Vuln Overview` (cohort metrics: reports submitted, findings per trainee, CVSS distribution)
 
 Key variables: `reporting_workspace_datasources`, `reporting_workspace_dashboards`.
 
 ### `instructor-console`
-Configures the instructor's Ubuntu workstation with tmux sessions and shell
-shortcuts. Default shortcuts open GoPhish, MailHog, the LMS portal, and Grafana.
+Configures the instructor's Ubuntu workstation with tmux sessions and shell shortcuts.
+Default shortcuts open the LMS portal, Gitea, Grafana, and the target server status.
 Key variables: `instructor_console_shortcuts`, `instructor_console_tmux_settings`.
 
-### `trainee-workstation`
-Deploys the REP Collector agent (PowerShell service) and a welcome note on each
-Windows workstation. Key variables: `trainee_workstation_collector.*`,
-`trainee_workstation_welcome_note`.
+### `pentest-tools`
+Installs Nmap and supporting packages on each pentest workstation, creates the
+`/opt/pentest/` workspace, deploys a pre-configured scan script, and sets up a
+welcome MOTD with URLs and target information.
 
-### `windows`
-Basic Windows OS hardening: disables automatic updates, enables RDP and WinRM,
-adjusts firewall rules. Always applied before `trainee-workstation`.
+Key variables: `pentest_tools_target_range`, `pentest_tools_results_dir`,
+`pentest_tools_nmap_packages`, `pentest_tools_openvas_enabled` (default: false).
 
 ## Helper scripts
 
 | Script | Purpose |
 |--------|---------|
-| `case-2a/scripts/export_gophish_results.sh` | Export campaign results via GoPhish REST API to JSON |
-| `case-2a/scripts/examples/campaign-config.json` | Example GoPhish campaign payload |
+| `case-2b/scripts/export_scan_results.sh` | Export trainee report metadata from Gitea API to JSON |
+| `case-2b/topology.yml` | Scenario-specific topology (mirrors root `topology.yml`) |
 
 ## Parameterisation
 

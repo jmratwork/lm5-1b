@@ -52,6 +52,25 @@ def test_training_linear_structure(training_data):
         )
 
 
+def test_training_linear_subcase_2b(training_data):
+    modules = training_data["modules"]
+    assert any(m["id"] == "subcase-2b" for m in modules), (
+        "training_linear.json must contain a module with id 'subcase-2b'"
+    )
+
+    subcase = next(m for m in modules if m["id"] == "subcase-2b")
+    phases = subcase["phases"]
+    assert len(phases) == 3, "Sub Case 2b must have exactly 3 phases"
+
+    phase_names = [p["name"] for p in phases]
+    assert "Training and invitation" in phase_names
+    assert "Recon and scanning" in phase_names
+    assert "Reporting and recommendations" in phase_names
+
+    all_steps = [a["step"] for p in phases for a in p["activities"]]
+    assert len(all_steps) == 11, "Sub Case 2b must have exactly 11 steps total"
+
+
 @pytest.fixture(scope="module")
 def topology_data():
     topology_file = REPO_ROOT / "topology.yml"
@@ -80,7 +99,7 @@ def test_topology_components_are_consistent(topology_data):
 
 @pytest.mark.parametrize(
     "topology_path",
-    [REPO_ROOT / "provisioning" / "case-2a" / "topology.yml"],
+    [REPO_ROOT / "provisioning" / "case-2b" / "topology.yml"],
 )
 def test_provisioning_topologies(topology_path):
     if not topology_path.exists():
@@ -115,6 +134,21 @@ def test_provisioning_topologies(topology_path):
         assert mapping["network"] in networks, (
             f"Router mapping references unknown network '{mapping['network']}' in {topology_path.name}"
         )
+
+
+def test_topology_subcase_2b_has_target_zone(topology_data):
+    networks = {net["name"] for net in topology_data.get("networks", [])}
+    assert "target-zone" in networks, "topology.yml must define target-zone network"
+
+    hosts = {host["name"] for host in topology_data.get("hosts", [])}
+    assert "target-server" in hosts, "topology.yml must define target-server host"
+    assert "pentest-workstation-01" in hosts, "topology.yml must define pentest-workstation-01"
+    assert "report-repository" in hosts, "topology.yml must define report-repository host"
+
+    net_mappings = topology_data.get("net_mappings", [])
+    target_mappings = [m for m in net_mappings if m.get("host") == "target-server"]
+    assert target_mappings, "target-server must have a net_mapping entry"
+    assert target_mappings[0]["network"] == "target-zone"
 
 
 def load_yaml(relative_path):
@@ -219,3 +253,32 @@ def test_reporting_workspace_repo_setup_precedes_package_install():
     assert any("ansible.builtin.apt_repository" in step for step in block), (
         "Repository block should configure package repositories"
     )
+
+
+def test_pentest_tools_defaults_define_target_range():
+    defaults = load_yaml("provisioning/roles/pentest-tools/defaults/main.yml")
+    assert "pentest_tools_target_range" in defaults
+    assert defaults["pentest_tools_target_range"].startswith("10.20.40.")
+    assert "pentest_tools_results_dir" in defaults
+    assert "pentest_tools_nmap_packages" in defaults
+    nmap_pkgs = defaults["pentest_tools_nmap_packages"]
+    assert isinstance(nmap_pkgs, list)
+    assert "nmap" in nmap_pkgs
+
+
+def test_target_network_defaults_define_dvwa_and_ssh():
+    defaults = load_yaml("provisioning/roles/target-network/defaults/main.yml")
+    assert "target_network_dvwa_port" in defaults
+    assert defaults["target_network_dvwa_port"] == 80
+    assert "target_network_ssh_weak_user" in defaults
+    assert "target_network_ssh_weak_password" in defaults
+    assert "target_network_healthcheck" in defaults
+
+
+def test_report_repository_defaults_define_gitea():
+    defaults = load_yaml("provisioning/roles/report-repository/defaults/main.yml")
+    assert "report_repository_http_port" in defaults
+    assert defaults["report_repository_http_port"] == 3000
+    assert "report_repository_admin_user" in defaults
+    assert "report_repository_org_name" in defaults
+    assert "report_repository_healthcheck" in defaults

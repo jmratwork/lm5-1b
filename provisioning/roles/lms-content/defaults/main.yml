@@ -3,7 +3,7 @@ lms_content_web_root: /srv/lms
 lms_content_nginx_site: /etc/nginx/sites-available/lms.conf
 lms_content_nginx_site_enabled: /etc/nginx/sites-enabled/lms.conf
 lms_content_port: 8080
-lms_content_course_title: "Phishing Attack Awareness - PUC2-Sub Case 2a"
+lms_content_course_title: "Network Vulnerability Identification - PUC2-Sub Case 2b"
 lms_content_healthcheck:
   url: "http://127.0.0.1:{{ lms_content_port }}/"
   status_code: 200

@@ -30,6 +30,8 @@
     .badge.complete { background: #e8f5e9; color: #1b5e20; }
     .highlight { background: #fff8e1; border-left: 4px solid #f9a825;
                  padding: 10px 14px; margin: 12px 0; border-radius: 0 4px 4px 0; }
+    .warn { background: #fdecea; border-left: 4px solid #e53935;
+            padding: 10px 14px; margin: 12px 0; border-radius: 0 4px 4px 0; }
     .checklist label { display: flex; align-items: flex-start; gap: 10px;
                        margin-bottom: 10px; cursor: pointer; font-size: 14px; }
     .checklist input { margin-top: 3px; width: 16px; height: 16px; }
@@ -54,14 +56,14 @@
 
 <header>
   <h1>{{ lms_content_course_title }}</h1>
-  <p>CyberRangeCZ &mdash; Hands-on Educational Platform &mdash; PUC2-Sub Case 2a</p>
+  <p>CyberRangeCZ &mdash; Hands-on Educational Platform &mdash; PUC2-Sub Case 2b</p>
 </header>
 
 <nav>
   <button class="active" onclick="showTab('overview', this)">Overview</button>
-  <button onclick="showTab('module1', this)">Module 1 &mdash; Sender Analysis</button>
-  <button onclick="showTab('module2', this)">Module 2 &mdash; Content Red Flags</button>
-  <button onclick="showTab('module3', this)">Module 3 &mdash; Attachments &amp; Reporting</button>
+  <button onclick="showTab('module1', this)">Module 1 &mdash; Network Recon</button>
+  <button onclick="showTab('module2', this)">Module 2 &mdash; Vuln Scanning</button>
+  <button onclick="showTab('module3', this)">Module 3 &mdash; Reporting</button>
   <button onclick="showTab('exercise', this)">Practical Exercise</button>
 </nav>
 
@@ -71,26 +73,30 @@
 <div id="overview" class="tab active">
   <div class="card">
     <span class="badge complete">Course Overview</span>
-    <h2>Phishing Attack Awareness Training</h2>
-    <p>This self-paced course trains you to identify and respond to phishing attacks.
+    <h2>Network Vulnerability Identification Training</h2>
+    <p>This self-paced course trains you to identify network vulnerabilities using
+       penetration testing techniques against a simulated CYNET-like lab environment.
        Complete all three theory modules before starting the practical exercise.</p>
     <h3>Learning Objectives</h3>
     <ol>
-      <li>Scrutinise sender information for inconsistencies</li>
-      <li>Analyse email content for red flags (grammar errors, urgency, threats)</li>
-      <li>Verify attachments and embedded links for legitimacy</li>
-      <li>Report suspicious emails using organisational protocols</li>
+      <li>Perform network reconnaissance to discover hosts, ports and services</li>
+      <li>Conduct semi-automated vulnerability assessments using Nmap</li>
+      <li>Map findings to known vulnerabilities (CVE/CVSS) and exploit vectors</li>
+      <li>Compile a structured vulnerability report with prioritised remediation recommendations</li>
     </ol>
     <h3>Assessment Scoring</h3>
     <div class="score-grid">
-      <div class="score-item"><div class="weight">40%</div><div class="label">Detection accuracy (red flags identified)</div></div>
-      <div class="score-item"><div class="weight">30%</div><div class="label">Incident report completeness</div></div>
-      <div class="score-item"><div class="weight">20%</div><div class="label">Time to detection and report</div></div>
-      <div class="score-item"><div class="weight">+10%</div><div class="label">Bonus: did NOT click the phishing link</div></div>
+      <div class="score-item"><div class="weight">35%</div><div class="label">Scan completeness (all key services identified)</div></div>
+      <div class="score-item"><div class="weight">30%</div><div class="label">Vulnerability classification accuracy (CVE/CVSS)</div></div>
+      <div class="score-item"><div class="weight">25%</div><div class="label">Remediation recommendation quality</div></div>
+      <div class="score-item"><div class="weight">10%</div><div class="label">Report clarity and documentation standards</div></div>
     </div>
-    <h3>Your Lab Inbox</h3>
-    <p>Simulated phishing emails will be delivered to your MailHog inbox:</p>
-    <div class="url-box">http://mail-relay.internal:8025/</div>
+    <h3>Target Network</h3>
+    <p>Your lab target network:</p>
+    <div class="url-box">10.20.40.0/24 &mdash; target host: 10.20.40.10</div>
+    <h3>Your Report Repository</h3>
+    <p>Submit your vulnerability report to Gitea:</p>
+    <div class="url-box">http://report-repo.internal:3000/</div>
     <button class="btn btn-primary" onclick="showTab('module1', document.querySelectorAll('nav button')[1])">Start with Module 1 &rarr;</button>
   </div>
 </div>
@@ -99,40 +105,54 @@
 <div id="module1" class="tab">
   <div class="card">
     <span class="badge theory">Theory</span>
-    <h2>Module 1 &mdash; Scrutinising Sender Information</h2>
-    <p>The sender field is the first and most important indicator of a phishing email.
-       Attackers use several techniques to make malicious emails appear legitimate.</p>
+    <h2>Module 1 &mdash; Network Reconnaissance</h2>
+    <p>Reconnaissance is the first phase of a penetration test. The goal is to build
+       a complete picture of the target environment before attempting any exploitation.</p>
 
-    <h3>Display Name Spoofing</h3>
-    <p>The <em>display name</em> (the friendly name shown in your email client) can be
-       set to anything, regardless of the actual email address. Always check the
-       <strong>raw email address</strong>, not just the display name.</p>
-    <div class="highlight">
-      <strong>Example:</strong> "IT Security Team" &lt;attacker@malicious-domain.ru&gt;<br>
-      The display name looks legitimate; the domain does not.
-    </div>
-
-    <h3>Domain Look-alikes (Typosquatting)</h3>
-    <p>Attackers register domains that visually resemble legitimate ones:</p>
+    <h3>Host Discovery</h3>
+    <p>Before scanning ports, identify which hosts are alive on the target network.
+       Nmap provides several host discovery techniques:</p>
     <ul>
-      <li><code>company-security.com</code> vs <code>company.com</code></li>
-      <li><code>companysecurity.com</code> (no hyphen)</li>
-      <li><code>c0mpany.com</code> (zero instead of letter o)</li>
-      <li><code>company.com.attacker.net</code> (legitimate domain as subdomain)</li>
+      <li><code>nmap -sn 10.20.40.0/24</code> &mdash; Ping sweep (no port scan)</li>
+      <li><code>nmap -sn --send-ip 10.20.40.0/24</code> &mdash; ICMP echo only</li>
     </ul>
 
-    <h3>Reply-To Mismatches</h3>
-    <p>Even if the <em>From</em> address looks valid, the <em>Reply-To</em> header
-       may point to a different domain controlled by the attacker. Always inspect
-       email headers.</p>
+    <h3>Port Scanning</h3>
+    <p>Once live hosts are identified, enumerate open TCP/UDP ports:</p>
+    <ul>
+      <li><strong>SYN scan</strong> (<code>-sS</code>): stealthy half-open scan (requires root)</li>
+      <li><strong>Connect scan</strong> (<code>-sT</code>): full TCP handshake (no root needed)</li>
+      <li><strong>UDP scan</strong> (<code>-sU</code>): slower, but covers UDP services (DNS, SNMP)</li>
+      <li><strong>Top ports</strong>: <code>--top-ports 100</code> for quick wins</li>
+    </ul>
+    <div class="highlight">
+      <strong>Key command:</strong> <code>nmap -sV -sC -O -p 22,80,443,3306,8080 10.20.40.10</code><br>
+      Combines: version detection (<code>-sV</code>), default scripts (<code>-sC</code>), OS fingerprinting (<code>-O</code>)
+    </div>
 
-    <h3>Checklist &mdash; Sender Indicators</h3>
+    <h3>Service and Version Enumeration</h3>
+    <p>Knowing which service version is running is critical for vulnerability mapping.
+       Outdated versions often have public CVEs. Key flags:</p>
+    <ul>
+      <li><code>-sV</code>: probe open ports for service/version info</li>
+      <li><code>--version-intensity 5</code>: aggressive version detection (0&ndash;9 scale)</li>
+      <li><code>-A</code>: shorthand for <code>-sV -sC -O --traceroute</code></li>
+    </ul>
+
+    <h3>Saving Scan Output</h3>
+    <p>Always save scan results for your vulnerability report:</p>
+    <ul>
+      <li><code>-oN scan.txt</code> &mdash; human-readable</li>
+      <li><code>-oX scan.xml</code> &mdash; XML (machine-parseable)</li>
+      <li><code>-oA scan</code> &mdash; all formats simultaneously</li>
+    </ul>
+
+    <h3>Checklist &mdash; Reconnaissance</h3>
     <div class="checklist">
-      <label><input type="checkbox"> The display name matches the actual email address domain</label>
-      <label><input type="checkbox"> The sending domain matches the organisation&rsquo;s known domain</label>
-      <label><input type="checkbox"> No typosquatting (extra characters, wrong TLD, look-alike letters)</label>
-      <label><input type="checkbox"> Reply-To address (if present) matches the From domain</label>
-      <label><input type="checkbox"> Email headers show a valid SPF/DKIM record for the sending domain</label>
+      <label><input type="checkbox"> I have identified all live hosts in the target range</label>
+      <label><input type="checkbox"> I have enumerated open ports on the primary target host</label>
+      <label><input type="checkbox"> I have identified service names and version numbers for each open port</label>
+      <label><input type="checkbox"> I have saved Nmap output in XML format to the results directory</label>
     </div>
     <button class="btn btn-primary" onclick="showTab('module2', document.querySelectorAll('nav button')[2])">Next: Module 2 &rarr;</button>
   </div>
@@ -142,48 +162,51 @@
 <div id="module2" class="tab">
   <div class="card">
     <span class="badge theory">Theory</span>
-    <h2>Module 2 &mdash; Analysing Content for Red Flags</h2>
-    <p>Even when the sender appears legitimate, the email body often contains
-       detectable indicators of a phishing attempt.</p>
+    <h2>Module 2 &mdash; Vulnerability Scanning and Classification</h2>
+    <p>After enumeration, the next step is to identify vulnerabilities in the discovered
+       services and classify them by severity and exploitability.</p>
 
-    <h3>Urgency and Fear Tactics</h3>
-    <p>Phishing emails exploit psychological pressure. Look for language such as:</p>
+    <h3>Nmap Scripting Engine (NSE)</h3>
+    <p>NSE scripts extend Nmap with vulnerability detection capabilities. Key script categories:</p>
     <ul>
-      <li>"Your account will be <strong>suspended</strong> within 24 hours"</li>
-      <li>"<strong>Immediate action required</strong> &mdash; failure to respond will result in&hellip;"</li>
-      <li>"<strong>URGENT</strong>: Verify your identity now"</li>
+      <li><strong>default</strong> (<code>-sC</code>): safe, informational scripts run automatically</li>
+      <li><strong>vuln</strong>: checks for known CVEs and misconfigurations</li>
+      <li><strong>auth</strong>: tests for default/weak credentials</li>
+      <li><strong>http-enum</strong>: web application directory and file enumeration</li>
+      <li><strong>ssh-auth-methods</strong>: lists supported SSH authentication methods</li>
     </ul>
-    <p>Legitimate IT systems rarely threaten immediate suspension via email without prior warning.</p>
+    <div class="highlight">
+      <strong>Example:</strong> <code>nmap --script=vuln,http-enum,ssh-auth-methods 10.20.40.10</code>
+    </div>
 
-    <h3>Grammatical and Stylistic Errors</h3>
-    <p>While AI-generated phishing has improved, many attacks still contain:</p>
+    <h3>CVSS Scoring</h3>
+    <p>The Common Vulnerability Scoring System (CVSS v3.1) rates severity from 0 to 10:</p>
     <ul>
-      <li>Spelling mistakes and grammatical errors</li>
-      <li>Inconsistent capitalisation or punctuation</li>
-      <li>Awkward or overly formal phrasing</li>
-      <li>Generic salutations ("Dear User", "Dear Customer")</li>
+      <li><strong>Critical</strong> (9.0&ndash;10.0): immediate remediation required</li>
+      <li><strong>High</strong> (7.0&ndash;8.9): patch within days</li>
+      <li><strong>Medium</strong> (4.0&ndash;6.9): scheduled remediation</li>
+      <li><strong>Low</strong> (0.1&ndash;3.9): address when feasible</li>
     </ul>
+    <p>For each finding, record: CVE ID (if known), CVSS base score, attack vector
+       (network/local/adjacent), and whether privileges are required.</p>
 
-    <h3>Suspicious URLs</h3>
-    <p>Before clicking any link, hover over it to preview the actual URL. Red flags:</p>
+    <h3>Common Vulnerability Classes to Look For</h3>
     <ul>
-      <li>Domain does not match the organisation</li>
-      <li>IP address instead of domain name (<code>http://192.168.x.x/login</code>)</li>
-      <li>HTTP instead of HTTPS for login pages</li>
-      <li>Excessive redirects or URL shorteners (<code>bit.ly</code>, <code>t.co</code>)</li>
+      <li><strong>Default credentials</strong>: admin/admin, admin/password, root/root</li>
+      <li><strong>Outdated software versions</strong>: cross-reference with NVD or ExploitDB</li>
+      <li><strong>Open ports unnecessarily exposed</strong>: databases (3306), admin panels</li>
+      <li><strong>Weak SSH configuration</strong>: password auth enabled, root login permitted</li>
+      <li><strong>Web application vulnerabilities</strong>: SQLi, XSS, IDOR, path traversal (DVWA)</li>
+      <li><strong>Missing TLS/HTTPS</strong>: sensitive data transmitted in cleartext</li>
     </ul>
 
-    <h3>Mismatched Branding</h3>
-    <p>Logos, colours, and layout that do not match the real organisation&rsquo;s
-       branding, or images that fail to load (broken image placeholders).</p>
-
-    <h3>Checklist &mdash; Content Indicators</h3>
+    <h3>Checklist &mdash; Vulnerability Scanning</h3>
     <div class="checklist">
-      <label><input type="checkbox"> No artificial urgency or threat language present</label>
-      <label><input type="checkbox"> Salutation uses my correct full name (not "Dear User")</label>
-      <label><input type="checkbox"> No obvious spelling or grammatical errors</label>
-      <label><input type="checkbox"> All hyperlinks point to the expected organisational domain</label>
-      <label><input type="checkbox"> Branding matches the real organisation&rsquo;s style guide</label>
+      <label><input type="checkbox"> I have run NSE vuln scripts against all discovered services</label>
+      <label><input type="checkbox"> I have identified at least one web application vulnerability (DVWA)</label>
+      <label><input type="checkbox"> I have checked SSH for password authentication and weak credentials</label>
+      <label><input type="checkbox"> I have assigned a CVSS severity rating to each finding</label>
+      <label><input type="checkbox"> I have saved vulnerability scan output to /opt/pentest/results/</label>
     </div>
     <button class="btn btn-primary" onclick="showTab('module3', document.querySelectorAll('nav button')[3])">Next: Module 3 &rarr;</button>
   </div>
@@ -193,44 +216,50 @@
 <div id="module3" class="tab">
   <div class="card">
     <span class="badge theory">Theory</span>
-    <h2>Module 3 &mdash; Verifying Attachments and Reporting</h2>
+    <h2>Module 3 &mdash; Reporting and Recommendations</h2>
 
-    <h3>Attachment Red Flags</h3>
-    <p>Malicious attachments are a primary delivery vector. Exercise extreme caution with:</p>
+    <h3>Vulnerability Report Structure</h3>
+    <p>A professional vulnerability report documents findings clearly so a technical team
+       can prioritise and remediate them. Each finding should include:</p>
+    <ol>
+      <li><strong>Finding title</strong>: concise, descriptive (e.g., &ldquo;Default Credentials on DVWA Admin Account&rdquo;)</li>
+      <li><strong>Affected host/service</strong>: IP, port, service name and version</li>
+      <li><strong>Vulnerability description</strong>: what the issue is and why it matters</li>
+      <li><strong>CVE / CVSS</strong>: reference ID and base score (if applicable)</li>
+      <li><strong>Evidence</strong>: Nmap output excerpt, screenshot, or command output</li>
+      <li><strong>Remediation recommendation</strong>: specific, actionable steps</li>
+      <li><strong>Priority</strong>: Critical / High / Medium / Low</li>
+    </ol>
+
+    <h3>Remediation Recommendations</h3>
+    <p>Good remediation recommendations are specific and implementable:</p>
     <ul>
-      <li><strong>Executable files:</strong> <code>.exe</code>, <code>.bat</code>, <code>.ps1</code>, <code>.vbs</code>, <code>.js</code></li>
-      <li><strong>Office macro documents:</strong> <code>.docm</code>, <code>.xlsm</code> (macros disabled by default for a reason)</li>
-      <li><strong>Archive files:</strong> <code>.zip</code>, <code>.rar</code>, <code>.7z</code> (may conceal malicious payloads)</li>
-      <li><strong>PDF files:</strong> can contain embedded JavaScript or exploit links</li>
-      <li><strong>Double extensions:</strong> <code>invoice.pdf.exe</code> (the real extension is <code>.exe</code>)</li>
+      <li><strong>Default credentials</strong>: &ldquo;Change DVWA admin password immediately; enforce password complexity policy (min 12 chars, uppercase, digit, special character).&rdquo;</li>
+      <li><strong>SSH password auth</strong>: &ldquo;Disable PasswordAuthentication in /etc/ssh/sshd_config; enforce public-key authentication only.&rdquo;</li>
+      <li><strong>Outdated service</strong>: &ldquo;Upgrade MariaDB from 10.x to latest stable; subscribe to vendor security advisories.&rdquo;</li>
+      <li><strong>Missing TLS</strong>: &ldquo;Enable HTTPS with a valid certificate; configure HTTP-to-HTTPS redirect; set HSTS header.&rdquo;</li>
     </ul>
 
-    <h3>Safe Verification Steps</h3>
+    <h3>Submitting Your Report to Gitea</h3>
     <ol>
-      <li>Do <strong>not</strong> open the attachment on your workstation</li>
-      <li>Check the file extension carefully (enable "show file extensions" in Windows)</li>
-      <li>Verify with the sender via a <strong>separate channel</strong> (phone, Teams) &mdash; not by replying to the email</li>
-      <li>Submit the file to IT Security for sandbox analysis if in doubt</li>
+      <li>Clone your trainee repository: <code>git clone http://report-repo.internal:3000/cyberrange-2b/vuln-report-&lt;your-id&gt;</code></li>
+      <li>Create your report file: <code>VULNERABILITY-REPORT.md</code></li>
+      <li>Include all findings using the structure above</li>
+      <li>Commit and push: <code>git add . && git commit -m "Add vulnerability report" && git push</code></li>
     </ol>
-
-    <h3>Reporting Protocols</h3>
-    <p>Reporting a suspicious email quickly is as important as detecting it. Your options:</p>
-    <ol>
-      <li><strong>GoPhish Report Button:</strong> If the email was sent via GoPhish, use the "Report Phishing" button in the email client or landing page &mdash; this records your detection in the training platform.</li>
-      <li><strong>REP Incident Form:</strong> Submit a detection report via the REP Practical Labs incident form, documenting all identified indicators.</li>
-      <li><strong>IT Security Helpdesk:</strong> Forward the suspicious email as an attachment to <code>security@company.internal</code> (in a real scenario).</li>
-    </ol>
-
-    <div class="highlight">
-      <strong>Key principle:</strong> When in doubt, do NOT click. Report first, investigate later with IT Security support.
+    <div class="warn">
+      <strong>Authorisation boundary:</strong> All scanning and exploitation attempts must remain
+      within the target range 10.20.40.0/24. Activity outside this range is unauthorised
+      and will be flagged.
     </div>
 
-    <h3>Checklist &mdash; Attachment and Reporting</h3>
+    <h3>Checklist &mdash; Reporting</h3>
     <div class="checklist">
-      <label><input type="checkbox"> I have NOT opened any suspicious attachments</label>
-      <label><input type="checkbox"> I verified the attachment type and extension are expected</label>
-      <label><input type="checkbox"> I confirmed the request through a separate communication channel</label>
-      <label><input type="checkbox"> I have submitted a report documenting all identified red flags</label>
+      <label><input type="checkbox"> My report covers at least three distinct findings</label>
+      <label><input type="checkbox"> Each finding includes CVE/CVSS where applicable</label>
+      <label><input type="checkbox"> Each finding has a specific, actionable remediation recommendation</label>
+      <label><input type="checkbox"> I have included Nmap output evidence for each finding</label>
+      <label><input type="checkbox"> I have pushed my report to my Gitea repository</label>
     </div>
     <button class="btn btn-primary" onclick="showTab('exercise', document.querySelectorAll('nav button')[4])">Start Practical Exercise &rarr;</button>
   </div>
@@ -240,23 +269,26 @@
 <div id="exercise" class="tab">
   <div class="card">
     <span class="badge exercise">Practical Exercise</span>
-    <h2>Phishing Detection Exercise</h2>
-    <p>You are now ready to begin the practical exercise. A simulated phishing email
-       has been (or will be) delivered to your lab inbox.</p>
+    <h2>Network Vulnerability Identification Exercise</h2>
+    <p>You are now ready to begin the practical exercise against the CYNET-like lab network.</p>
 
-    <h3>Step 1 &mdash; Check Your Lab Inbox</h3>
-    <p>Open the MailHog WebUI to view your simulated inbox:</p>
-    <div class="url-box">http://mail-relay.internal:8025/</div>
+    <h3>Step 1 &mdash; Run the pre-configured scan script</h3>
+    <p>From your pentest workstation terminal:</p>
+    <div class="url-box">sudo /opt/pentest/scripts/nmap-scan.sh</div>
+    <p>This runs host discovery, service enumeration, and vulnerability scripts against the target (10.20.40.0/24).
+       Results are saved to <code>/opt/pentest/results/</code>.</p>
 
-    <h3>Step 2 &mdash; Analyse the Email</h3>
-    <p>Using the checklists from Modules 1&ndash;3, inspect the email and identify
-       as many phishing indicators as possible. Do <strong>NOT</strong> click any
-       links unless you are deliberately testing detection (clicking the phishing
-       link will be recorded).</p>
+    <h3>Step 2 &mdash; Review and extend your findings</h3>
+    <p>Open the saved Nmap XML and text reports. For web services, explore
+       the DVWA application at:</p>
+    <div class="url-box">http://10.20.40.10/</div>
+    <p>Default credentials for DVWA: <code>admin / password</code></p>
+    <p>Try additional targeted scans as needed:</p>
+    <div class="url-box">nmap --script=http-enum,http-title -p 80 10.20.40.10</div>
 
-    <h3>Step 3 &mdash; Submit Your Detection Report</h3>
-    <p>Document your findings in the incident report form below and submit it.
-       Include every red flag you identified.</p>
+    <h3>Step 3 &mdash; Compile and submit your vulnerability report</h3>
+    <p>Document your findings in Markdown and push to your Gitea repository:</p>
+    <div class="url-box">http://report-repo.internal:3000/</div>
 
     <form id="reportForm" onsubmit="submitReport(event)" style="margin-top:16px;">
       <div style="margin-bottom:12px;">
@@ -264,20 +296,20 @@
         <input type="text" id="trainee" required style="width:100%;padding:8px;margin-top:4px;border:1px solid #ccc;border-radius:4px;">
       </div>
       <div style="margin-bottom:12px;">
-        <label style="font-size:14px;font-weight:bold;">Is this email suspicious? *</label><br>
-        <label style="font-size:14px;"><input type="radio" name="verdict" value="yes" required> Yes &mdash; this is a phishing attempt</label><br>
-        <label style="font-size:14px;"><input type="radio" name="verdict" value="no"> No &mdash; this email appears legitimate</label>
+        <label style="font-size:14px;font-weight:bold;">Gitea report URL (after push) *</label><br>
+        <input type="url" id="reportUrl" required style="width:100%;padding:8px;margin-top:4px;border:1px solid #ccc;border-radius:4px;"
+               placeholder="http://report-repo.internal:3000/cyberrange-2b/vuln-report-...">
       </div>
       <div style="margin-bottom:12px;">
-        <label style="font-size:14px;font-weight:bold;">Red flags identified (one per line) *</label><br>
-        <textarea id="indicators" required rows="6" style="width:100%;padding:8px;margin-top:4px;border:1px solid #ccc;border-radius:4px;font-size:13px;" placeholder="Example:&#10;- Sender domain does not match company domain&#10;- Urgent language: 'account suspended in 24h'&#10;- Link points to phishing-simulator.internal, not company domain&#10;- Generic salutation 'Dear [FirstName]'"></textarea>
+        <label style="font-size:14px;font-weight:bold;">Vulnerabilities found (one per line, format: Port/Service — Description) *</label><br>
+        <textarea id="findings" required rows="6" style="width:100%;padding:8px;margin-top:4px;border:1px solid #ccc;border-radius:4px;font-size:13px;"
+                  placeholder="Example:&#10;80/HTTP — DVWA default credentials (admin/password), CVSS 9.8&#10;22/SSH — Password authentication enabled, weak password policy, CVSS 7.5&#10;3306/MySQL — Exposed database port, no external access restriction, CVSS 5.3"></textarea>
       </div>
       <div style="margin-bottom:12px;">
-        <label style="font-size:14px;font-weight:bold;">Did you click the link in the email?</label><br>
-        <label style="font-size:14px;"><input type="radio" name="clicked" value="no"> No &mdash; I did not click the link</label><br>
-        <label style="font-size:14px;"><input type="radio" name="clicked" value="yes"> Yes &mdash; I clicked the link (note: this is recorded)</label>
+        <label style="font-size:14px;font-weight:bold;">How many critical/high severity findings did you identify?</label><br>
+        <input type="number" id="criticalCount" min="0" max="20" style="width:80px;padding:8px;margin-top:4px;border:1px solid #ccc;border-radius:4px;">
       </div>
-      <button type="submit" class="btn btn-danger">Submit Detection Report</button>
+      <button type="submit" class="btn btn-danger">Submit Exercise Checkin</button>
     </form>
     <div id="reportResult" style="display:none;" class="highlight" style="margin-top:16px;"></div>
   </div>
@@ -286,8 +318,9 @@
 </main>
 
 <footer>
-  CyberRangeCZ &mdash; PUC2-Sub Case 2a &mdash; Hands-on Educational Platform &mdash;
-  Reporting Workspace: <a href="http://reporting.internal:3000/" style="color:#4a9fd4;">http://reporting.internal:3000/</a>
+  CyberRangeCZ &mdash; PUC2-Sub Case 2b &mdash; Hands-on Educational Platform &mdash;
+  Report Repository: <a href="http://report-repo.internal:3000/" style="color:#4a9fd4;">http://report-repo.internal:3000/</a>
+  &mdash; Dashboard: <a href="http://reporting.internal:3000/" style="color:#4a9fd4;">http://reporting.internal:3000/</a>
 </footer>
 
 <script>
@@ -300,20 +333,20 @@ function showTab(id, btn) {
 
 function submitReport(e) {
   e.preventDefault();
-  var trainee   = document.getElementById('trainee').value;
-  var indicators = document.getElementById('indicators').value;
-  var verdict   = document.querySelector('input[name="verdict"]:checked');
-  var clicked   = document.querySelector('input[name="clicked"]:checked');
+  var trainee      = document.getElementById('trainee').value;
+  var reportUrl    = document.getElementById('reportUrl').value;
+  var findings     = document.getElementById('findings').value;
+  var criticalCount = document.getElementById('criticalCount').value;
 
   var result = document.getElementById('reportResult');
   result.style.display = 'block';
   result.innerHTML =
-    '<strong>Report submitted.</strong><br>' +
+    '<strong>Exercise check-in submitted.</strong><br>' +
     'Trainee: ' + trainee + '<br>' +
-    'Verdict: ' + (verdict ? verdict.value : 'not selected') + '<br>' +
-    'Link clicked: ' + (clicked ? clicked.value : 'not answered') + '<br>' +
-    'Indicators documented: ' + indicators.split('\n').filter(l => l.trim()).length + '<br><br>' +
-    'Your instructor will review results in the Grafana Reporting Workspace.<br>' +
+    'Report URL: <a href="' + reportUrl + '">' + reportUrl + '</a><br>' +
+    'Findings documented: ' + findings.split('\n').filter(function(l){ return l.trim(); }).length + '<br>' +
+    'Critical/High findings: ' + (criticalCount || '0') + '<br><br>' +
+    'Your instructor will review your Gitea report and provide feedback.<br>' +
     '<a href="http://reporting.internal:3000/">View Cohort Dashboard &rarr;</a>';
 }
 </script>

@@ -1,0 +1,14 @@
+---
+target_network_compose_dir: /opt/target-network
+target_network_compose_file: /opt/target-network/docker-compose.yml
+target_network_dvwa_port: 80
+target_network_dvwa_db_password: dvwa_lab_pass
+target_network_ssh_port: 22
+target_network_ssh_weak_user: labuser
+target_network_ssh_weak_password: "Password123"
+target_network_healthcheck:
+  url: "http://127.0.0.1:{{ target_network_dvwa_port }}/setup.php"
+  status_code: 200
+  timeout: 60
+  retries: 10
+  delay: 6

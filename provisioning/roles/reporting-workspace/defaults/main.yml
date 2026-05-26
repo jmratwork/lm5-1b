@@ -12,10 +12,10 @@ reporting_workspace_datasources:
     secureJsonData:
       password: changeme
 reporting_workspace_dashboards:
-  - uid: rep-overview
-    title: REP Overview
+  - uid: vuln-overview
+    title: Network Vuln Overview
     folder: REP
-    file: rep-overview.json
+    file: vuln-overview.json
 reporting_workspace_healthcheck:
   url: http://127.0.0.1:3000/api/health
   status_code: 200
