@@ -71,6 +71,16 @@
   retries: "{{ target_network_healthcheck.retries }}"
   delay: "{{ target_network_healthcheck.delay }}"
 
+- name: Wait for phpMyAdmin to be reachable
+  ansible.builtin.uri:
+    url: "{{ target_network_phpmyadmin_healthcheck.url }}"
+    status_code: "{{ target_network_phpmyadmin_healthcheck.status_code }}"
+    timeout: "{{ target_network_phpmyadmin_healthcheck.timeout }}"
+  register: phpmyadmin_health
+  until: phpmyadmin_health.status == target_network_phpmyadmin_healthcheck.status_code
+  retries: "{{ target_network_phpmyadmin_healthcheck.retries }}"
+  delay: "{{ target_network_phpmyadmin_healthcheck.delay }}"
+
 - name: Configure weak-credential SSH user
   ansible.builtin.user:
     name: "{{ target_network_ssh_weak_user }}"

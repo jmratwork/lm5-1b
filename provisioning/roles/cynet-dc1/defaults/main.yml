@@ -1,0 +1,35 @@
+---
+# CYNET DC1 - Identity & Access layer simulation
+# Deployed on cynet-dc1 (10.20.40.20)
+
+cynet_dc1_compose_dir: /opt/cynet-dc1
+cynet_dc1_compose_file: /opt/cynet-dc1/docker-compose.yml
+
+# OpenLDAP - Identity & Access (anonymous bind enabled = vulnerability)
+cynet_dc1_ldap_organisation: "CYNET"
+cynet_dc1_ldap_domain: "cynet.cy"
+cynet_dc1_ldap_admin_password: "admin"
+cynet_dc1_ldap_config_password: "config"
+cynet_dc1_ldap_readonly_password: "readonly"
+cynet_dc1_ldap_port: 389
+cynet_dc1_ldaps_port: 636
+
+# phpLDAPadmin - LDAP admin panel (exposed over HTTP = vulnerability)
+cynet_dc1_ldapadmin_port: 8180
+
+# SSH management access (weak credentials = vulnerability)
+cynet_dc1_ssh_mgmt_user: cynetadmin
+cynet_dc1_ssh_mgmt_password: "Cynet@2024"
+
+cynet_dc1_ldap_healthcheck:
+  host: "127.0.0.1"
+  port: "{{ cynet_dc1_ldap_port }}"
+  retries: 10
+  delay: 6
+
+cynet_dc1_ldapadmin_healthcheck:
+  url: "http://127.0.0.1:{{ cynet_dc1_ldapadmin_port }}/"
+  status_code: 200
+  timeout: 30
+  retries: 8
+  delay: 6

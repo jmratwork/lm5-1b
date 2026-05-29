@@ -1,0 +1,54 @@
+---
+# CYNET DC1 - Identity & Access layer simulation
+# cynet-dc1 (10.20.40.20)
+
+services:
+
+  # OpenLDAP — Identity & Access
+  # Vulnerabilities (intentional):
+  #   - Weak admin password ("admin")
+  #   - Anonymous bind enabled: unauthenticated read of the directory
+  #   - Plaintext LDAP port 389 exposed (no TLS enforcement)
+  cynet-ldap:
+    image: osixia/openldap:1.5.0
+    container_name: cynet-ldap
+    restart: unless-stopped
+    environment:
+      LDAP_ORGANISATION: "{{ cynet_dc1_ldap_organisation }}"
+      LDAP_DOMAIN: "{{ cynet_dc1_ldap_domain }}"
+      LDAP_ADMIN_PASSWORD: "{{ cynet_dc1_ldap_admin_password }}"
+      LDAP_CONFIG_PASSWORD: "{{ cynet_dc1_ldap_config_password }}"
+      LDAP_READONLY_USER: "true"
+      LDAP_READONLY_USER_USERNAME: "readonly"
+      LDAP_READONLY_USER_PASSWORD: "{{ cynet_dc1_ldap_readonly_password }}"
+      LDAP_TLS: "false"
+    ports:
+      - "{{ cynet_dc1_ldap_port }}:389"
+      - "{{ cynet_dc1_ldaps_port }}:636"
+    networks:
+      - cynet-identity-vlan
+
+  # phpLDAPadmin — LDAP admin panel
+  # Vulnerabilities (intentional):
+  #   - Served over plain HTTP (no TLS)
+  #   - Exposed to target-zone network without access restriction
+  cynet-ldapadmin:
+    image: osixia/phpldapadmin:0.9.0
+    container_name: cynet-ldapadmin
+    restart: unless-stopped
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: cynet-ldap
+      PHPLDAPADMIN_HTTPS: "false"
+    ports:
+      - "{{ cynet_dc1_ldapadmin_port }}:80"
+    depends_on:
+      - cynet-ldap
+    networks:
+      - cynet-identity-vlan
+
+networks:
+  # Simulates DC1 Identity & Access VLAN segment
+  cynet-identity-vlan:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: cynet-idvlan

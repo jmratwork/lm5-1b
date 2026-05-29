@@ -17,7 +17,8 @@
           10.20.20.10  rep-core.internal
           10.20.30.10  reporting.internal
           10.20.30.20  report-repo.internal
-          10.20.40.10  target-server.internal
+          10.20.40.10  target-server.internal  cynet-apps.cynet.lab  dvwa.cynet.lab
+          10.20.40.20  cynet-dc1.internal      ldap.cynet.lab        identity.cynet.lab
 
 ###### Backend: REP core microservice nginx proxy
 - name: Configure REP core services
@@ -61,6 +62,13 @@
   become: true
   roles:
     - role: instructor-console
+
+###### Target network: CYNET DC1 - Identity & Access (OpenLDAP + phpLDAPadmin)
+- name: Deploy CYNET DC1 Identity and Access services
+  hosts: cynet_targets
+  become: true
+  roles:
+    - role: cynet-dc1
 
 ###### Frontend: pentest workstations
 - name: Configure pentest workstations

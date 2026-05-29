@@ -40,6 +40,11 @@ hosts:
       image: ubuntu-noble-x86_64
       mgmt_user: ubuntu
     flavor: standard.medium
+  - name: cynet-dc1
+    base_box:
+      image: ubuntu-noble-x86_64
+      mgmt_user: ubuntu
+    flavor: standard.small
   - name: reporting-workspace
     base_box:
       image: ubuntu-noble-x86_64
@@ -100,6 +105,9 @@ net_mappings:
   - host: target-server
     network: target-zone
     ip: 10.20.40.10
+  - host: cynet-dc1
+    network: target-zone
+    ip: 10.20.40.20
 router_mappings:
   - router: rep-gateway
     network: rep-backend

@@ -1,20 +1,31 @@
 ---
+# CYNET-like lab: DC1 Application Servers + Databases simulation
+# target-server (10.20.40.10)
+
 services:
+
+  # --- Storage / Databases layer ---
+
   dvwa-db:
     image: mariadb:10.11
-    container_name: dvwa-db
+    container_name: cynet-mariadb
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: dvwa
       MYSQL_USER: dvwa
       MYSQL_PASSWORD: {{ target_network_dvwa_db_password }}
+    ports:
+      # Intentional misconfiguration: database port exposed to host network
+      - "{{ target_network_mariadb_port }}:3306"
     networks:
-      - target-net
+      - cynet-storage-vlan
+
+  # --- Application Servers layer ---
 
   dvwa:
     image: vulnerables/web-dvwa:latest
-    container_name: dvwa
+    container_name: cynet-dvwa
     restart: unless-stopped
     ports:
       - "{{ target_network_dvwa_port }}:80"
@@ -26,8 +37,46 @@ services:
     depends_on:
       - dvwa-db
     networks:
-      - target-net
+      - cynet-server-vlan
+      - cynet-storage-vlan
+
+  # Database admin panel: intentionally exposed without network restriction
+  # Simulates misconfigured Databases layer in DC1
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: cynet-phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "{{ target_network_phpmyadmin_port }}:80"
+    environment:
+      PMA_HOST: dvwa-db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: root
+    depends_on:
+      - dvwa-db
+    networks:
+      - cynet-server-vlan
+      - cynet-storage-vlan
+
+  # Core Services portal: default nginx page (misconfiguration: default page not replaced)
+  # Simulates DC1 Core Services web front-end
+  core-services:
+    image: nginx:alpine
+    container_name: cynet-core-services
+    restart: unless-stopped
+    ports:
+      - "{{ target_network_core_services_port }}:80"
+    networks:
+      - cynet-server-vlan
 
 networks:
-  target-net:
+  # Simulates DC1 Server Network VLANs
+  cynet-server-vlan:
     driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: cynet-srv
+  # Simulates DC1 Storage Network VLANs
+  cynet-storage-vlan:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: cynet-stor

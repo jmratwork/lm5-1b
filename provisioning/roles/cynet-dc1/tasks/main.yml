@@ -1,0 +1,101 @@
+---
+# --- Docker ---
+
+- name: Install Docker prerequisites
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: true
+
+- name: Add Docker GPG key
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu noble stable"
+    state: present
+    update_cache: true
+
+- name: Install Docker Engine and Compose plugin
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+
+- name: Enable and start Docker service
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+# --- Compose directory and file ---
+
+- name: Create cynet-dc1 compose directory
+  ansible.builtin.file:
+    path: "{{ cynet_dc1_compose_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy Docker Compose file for cynet-dc1 services
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ cynet_dc1_compose_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart cynet-dc1 services
+
+- name: Pull Docker images for cynet-dc1
+  ansible.builtin.command:
+    cmd: docker compose -f {{ cynet_dc1_compose_file }} pull
+  changed_when: true
+
+- name: Start cynet-dc1 services
+  ansible.builtin.command:
+    cmd: docker compose -f {{ cynet_dc1_compose_file }} up -d
+  changed_when: true
+
+# --- Weak management SSH user (simulates DC1 management access misconfiguration) ---
+
+- name: Configure weak-credential management SSH user
+  ansible.builtin.user:
+    name: "{{ cynet_dc1_ssh_mgmt_user }}"
+    password: "{{ cynet_dc1_ssh_mgmt_password | password_hash('sha512') }}"
+    shell: /bin/bash
+    create_home: true
+
+- name: Allow password authentication in SSH (lab only)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PasswordAuthentication"
+    line: "PasswordAuthentication yes"
+  notify: restart sshd
+
+# --- Health checks ---
+
+- name: Wait for OpenLDAP port to be open
+  ansible.builtin.wait_for:
+    host: "{{ cynet_dc1_ldap_healthcheck.host }}"
+    port: "{{ cynet_dc1_ldap_healthcheck.port }}"
+    timeout: 60
+    delay: "{{ cynet_dc1_ldap_healthcheck.delay }}"
+
+- name: Wait for phpLDAPadmin to be reachable
+  ansible.builtin.uri:
+    url: "{{ cynet_dc1_ldapadmin_healthcheck.url }}"
+    status_code: "{{ cynet_dc1_ldapadmin_healthcheck.status_code }}"
+    timeout: "{{ cynet_dc1_ldapadmin_healthcheck.timeout }}"
+  register: ldapadmin_health
+  until: ldapadmin_health.status == cynet_dc1_ldapadmin_healthcheck.status_code
+  retries: "{{ cynet_dc1_ldapadmin_healthcheck.retries }}"
+  delay: "{{ cynet_dc1_ldapadmin_healthcheck.delay }}"
