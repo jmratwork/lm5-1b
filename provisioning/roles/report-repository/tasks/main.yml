@@ -90,7 +90,7 @@
 - name: Create Gitea admin user
   ansible.builtin.command:
     cmd: >
-      docker compose -f {{ report_repository_compose_file }} exec -T gitea
+      docker compose -f {{ report_repository_compose_file }} exec -T --user git gitea
       gitea admin user create
       --username {{ report_repository_admin_user }}
       --password {{ report_repository_admin_password }}
