@@ -50,55 +50,62 @@
         },
         {
           "name": "Recon and scanning",
-          "description": "Trainees gather technical information about the target network and conduct semi-automated vulnerability assessments using Nmap and available tools. The target network returns consolidated findings.",
+          "description": "Trainees gather technical information about the target network and conduct semi-automated vulnerability assessments using Nmap (network recon), OWASP ZAP (web application scanning), and Burp Suite (interactive web app testing). The target network returns consolidated findings covering both network-level and application-level vulnerabilities.",
           "activities": [
             {
               "step": 4,
               "actor": "Trainee",
               "target": "Target Network",
-              "description": "The trainee uses Nmap and supporting scripts from their pentest workstation to gather technical information about the target network: discover live hosts, enumerate open ports and running services, identify service versions, and detect potential misconfigurations. The target range is 10.20.40.0/24.",
+              "description": "The trainee uses Nmap, OWASP ZAP, and Burp Suite from their pentest workstation to gather technical information about the target network. Nmap discovers live hosts, enumerates open ports and service versions, and identifies network-level misconfigurations. ZAP spiders the DVWA web application and performs a passive baseline scan. Burp Suite is configured as an intercepting proxy for manual web application analysis. The target range is 10.20.40.0/24.",
               "tools": [
-                "Nmap (nmap -sV -sC -O 10.20.40.0/24)",
-                "Pentest workstation terminal",
-                "Pre-configured scan script (/opt/pentest/nmap-scan.sh)"
+                "Nmap (nmap -sV -sC -O 10.20.40.0/24) — network recon",
+                "Pre-configured Nmap scan script (/opt/pentest/scripts/nmap-scan.sh)",
+                "OWASP ZAP baseline scan (/opt/pentest/scripts/zap-scan.sh) — web app passive + spider",
+                "Burp Suite Community (/opt/pentest/scripts/burp-launcher.sh) — intercepting proxy",
+                "Pentest workstation terminal"
               ],
-              "success_criteria": "Trainee has run at least one Nmap scan covering the target range and obtained output showing discovered hosts, open ports, service versions, and OS fingerprint for target-server (10.20.40.10)."
+              "success_criteria": "Trainee has run the Nmap scan against 10.20.40.0/24, the ZAP baseline scan against http://10.20.40.10/, and has configured Burp Suite as a browser proxy. Nmap output shows discovered hosts and services; ZAP baseline report saved to /opt/pentest/results/zap/."
             },
             {
               "step": 5,
               "actor": "Target Network",
               "target": "Pen Test Tools",
-              "description": "The target network services (DVWA web application on port 80, weak-credential SSH on port 22, and ancillary services) respond to Nmap probes and vulnerability scan requests, triggering service fingerprinting and NSE script execution. The scan infrastructure executes enumeration against all listening services.",
+              "description": "The target network services (DVWA web application on port 80, weak-credential SSH on port 22) respond to all scan probes and exploitation attempts. Nmap triggers service fingerprinting and NSE script execution. ZAP spiders DVWA pages, intercepts HTTP responses, and executes passive vulnerability checks. Burp Suite captures and replays HTTP requests, enabling active exploitation of DVWA vulnerabilities including SQL injection and XSS. The target network records all interaction as scan evidence.",
               "tools": [
-                "Nmap NSE scripts (http-enum, ssh-brute, banner, vulners)",
-                "Target Network services (DVWA port 80, SSH port 22)",
-                "Pentest workstation terminal"
+                "Nmap NSE scripts (http-enum, http-title, ssh-auth-methods, banner, vuln)",
+                "OWASP ZAP spider and passive scanner",
+                "OWASP ZAP full active scan (zap-full-scan.py)",
+                "Burp Suite Repeater and Intruder modules",
+                "Target Network services: DVWA (port 80/tcp), SSH (port 22/tcp)"
               ],
-              "success_criteria": "Nmap NSE scripts have executed against all listening services on the target. HTTP enumeration identifies DVWA login page and common paths. SSH banner and version information captured."
+              "success_criteria": "Nmap NSE scripts executed against all services. ZAP spider has crawled DVWA and passive scan completed. Burp Suite Repeater has sent at least one manipulated request to DVWA. SSH banner and version information captured."
             },
             {
               "step": 6,
               "actor": "Pen Test Tools",
               "target": "Target Network",
-              "description": "The penetration testing tools return findings from the scan: list of open ports with service versions, identified vulnerabilities (CVE references where applicable), detected misconfigurations (default credentials on DVWA, weak SSH password policy), and risk assessment per finding. Nmap XML output is saved to the trainee workspace.",
+              "description": "The penetration testing tools return consolidated findings covering both network and web application layers: Nmap produces XML reports with open ports, service versions, OS fingerprint, and CVE cross-references (via vulners NSE). ZAP produces HTML and JSON reports identifying OWASP Top 10 issues (SQL injection, XSS, missing security headers, insecure cookies). Burp Suite captures exploitable request/response pairs demonstrating authentication bypass and injection vulnerabilities on DVWA. All findings are saved to the trainee workspace.",
               "tools": [
-                "Nmap output (XML + human-readable)",
+                "Nmap output (XML + human-readable) in /opt/pentest/results/",
                 "Nmap vulners NSE script (CVE cross-reference)",
-                "Pentest workstation workspace (/opt/pentest/results/)"
+                "OWASP ZAP HTML + JSON reports in /opt/pentest/results/zap/",
+                "Burp Suite project export / HTTP history"
               ],
-              "success_criteria": "Nmap XML report saved to /opt/pentest/results/scan-$(hostname)-$(date +%Y%m%d).xml. Findings include: open ports (80/tcp HTTP, 22/tcp SSH), service versions, DVWA application detected, default credential warning for DVWA admin account."
+              "success_criteria": "Nmap XML report saved to /opt/pentest/results/scan-<hostname>-<date>.xml with findings: open ports (80/tcp HTTP, 22/tcp SSH), service versions, DVWA detected. ZAP report saved to /opt/pentest/results/zap/ with at least one high/medium severity finding (e.g. SQL injection, XSS, missing Content-Security-Policy header). Burp Suite history shows at least one manually exploited DVWA vulnerability."
             },
             {
               "step": 7,
               "actor": "Target Network",
               "target": "Trainee",
-              "description": "The consolidated vulnerability scan results are available to the trainee: Nmap reports covering all discovered services, HTTP application enumeration results (DVWA paths, login page), SSH service details (version, key exchange algorithms), and a summary of exploitable entry points. The trainee reviews the findings and maps them to known vulnerabilities.",
+              "description": "The consolidated vulnerability findings from all tools are available to the trainee: Nmap reports covering network services, ZAP reports covering OWASP Top 10 web vulnerabilities on DVWA, and Burp Suite session evidence of manually exploited weaknesses. The trainee correlates findings across tools, assigns CVSS severity scores, and maps each vulnerability to an affected service and a recommended mitigation. This multi-tool evidence base forms the foundation of the vulnerability report.",
               "tools": [
-                "Nmap results (/opt/pentest/results/)",
+                "Nmap results (/opt/pentest/results/scan-*.xml)",
+                "OWASP ZAP reports (/opt/pentest/results/zap/zap-*.html)",
+                "Burp Suite project file / HTTP history export",
                 "LMS Practical Exercise tab (vulnerability mapping form)",
                 "REP Practical Labs - Findings view"
               ],
-              "success_criteria": "Trainee can articulate at least three distinct vulnerabilities or misconfigurations identified in the target network, each mapped to an affected service and a recommended mitigation."
+              "success_criteria": "Trainee can articulate at least five distinct vulnerabilities or misconfigurations across both network and web application layers: at minimum one network-level finding (Nmap), two web application findings from ZAP (e.g. SQLi, XSS), and two manually verified findings from Burp Suite. Each finding is mapped to an affected service, CVSS score, and remediation recommendation."
             }
           ]
         },
