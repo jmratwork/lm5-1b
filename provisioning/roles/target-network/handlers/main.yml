@@ -8,3 +8,9 @@
   ansible.builtin.service:
     name: sshd
     state: restarted
+
+- name: restart docker daemon
+  systemd:
+    name: docker
+    state: restarted
+    daemon_reload: yes

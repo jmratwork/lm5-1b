@@ -34,6 +34,19 @@
     state: started
     enabled: true
 
+- name: Configure Docker daemon registry mirror
+  copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "registry-mirrors": ["https://mirror.gcr.io"]
+      }
+    mode: '0644'
+  notify: restart docker daemon
+
+- name: Flush handlers to apply mirror before pull
+  meta: flush_handlers
+
 - name: Create target network compose directory
   ansible.builtin.file:
     path: "{{ target_network_compose_dir }}"
