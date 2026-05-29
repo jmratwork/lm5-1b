@@ -7,6 +7,12 @@
     state: present
     update_cache: true
 
+- name: Install acl package (required for Ansible become on Linux)
+  apt:
+    name: acl
+    state: present
+    update_cache: false
+
 - name: Ensure PostgreSQL service is started and enabled
   ansible.builtin.service:
     name: postgresql
