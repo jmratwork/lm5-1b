@@ -20,3 +20,5 @@ pentest_workstation_welcome_note:
 
     Complete all three theory modules before starting the practical exercise.
     Submit your vulnerability report to your Gitea repository when finished.
+
+pentest_user_password: "qwerty!23"
