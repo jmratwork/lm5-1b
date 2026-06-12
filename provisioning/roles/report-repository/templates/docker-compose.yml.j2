@@ -9,8 +9,8 @@ services:
       USER_GID: "1000"
       GITEA__server__HTTP_PORT: "{{ report_repository_http_port }}"
       GITEA__server__SSH_PORT: "{{ report_repository_ssh_port }}"
-      GITEA__server__DOMAIN: report-repo.internal
-      GITEA__server__ROOT_URL: "http://report-repo.internal:{{ report_repository_http_port }}/"
+      GITEA__server__DOMAIN: report-repository.internal
+      GITEA__server__ROOT_URL: "http://report-repository.internal:{{ report_repository_http_port }}/"
       GITEA__database__DB_TYPE: sqlite3
       GITEA__security__INSTALL_LOCK: "true"
       GITEA__service__DISABLE_REGISTRATION: "false"

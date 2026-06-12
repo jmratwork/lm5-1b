@@ -9,6 +9,12 @@ report_repository_admin_password: "CyberRange2b!"
 report_repository_admin_email: "admin@cyberrange.internal"
 report_repository_org_name: cyberrange-2b
 report_repository_trainee_repo_prefix: vuln-report
+
+# Trainee account used in the training exercises (git clone .../<trainee_user>/cynet-report.git)
+report_repository_trainee_user: git
+report_repository_trainee_password: "git"
+report_repository_trainee_email: "git@cyberrange.internal"
+report_repository_trainee_repo: cynet-report
 report_repository_healthcheck:
   url: "http://127.0.0.1:{{ report_repository_http_port }}/api/v1/version"
   status_code: 200

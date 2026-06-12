@@ -15,10 +15,14 @@ target_network_phpmyadmin_port: 8080
 # Core Services nginx portal (Application Servers / Core Services layer)
 target_network_core_services_port: 8443
 
+# DVWA application credentials (default shipped with image)
+target_network_dvwa_admin_user: admin
+target_network_dvwa_admin_password: password
+
 # SSH weak credentials (Management access misconfiguration)
 target_network_ssh_port: 22
 target_network_ssh_weak_user: labuser
-target_network_ssh_weak_password: "Password123"
+target_network_ssh_weak_password: "labuser"
 
 target_network_healthcheck:
   url: "http://127.0.0.1:{{ target_network_dvwa_port }}/setup.php"

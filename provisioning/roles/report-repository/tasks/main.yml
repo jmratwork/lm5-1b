@@ -114,3 +114,34 @@
       username: "{{ report_repository_org_name }}"
       visibility: private
     status_code: [201, 422]
+
+- name: Create trainee user in Gitea
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ report_repository_http_port }}/api/v1/admin/users"
+    method: POST
+    user: "{{ report_repository_admin_user }}"
+    password: "{{ report_repository_admin_password }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      username: "{{ report_repository_trainee_user }}"
+      password: "{{ report_repository_trainee_password }}"
+      email: "{{ report_repository_trainee_email }}"
+      must_change_password: false
+    status_code: [201, 422]
+
+- name: Create trainee report repository in Gitea
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ report_repository_http_port }}/api/v1/user/repos"
+    method: POST
+    user: "{{ report_repository_trainee_user }}"
+    password: "{{ report_repository_trainee_password }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      name: "{{ report_repository_trainee_repo }}"
+      description: "CYNET vulnerability report repository"
+      private: false
+      auto_init: true
+      default_branch: main
+    status_code: [201, 409]
