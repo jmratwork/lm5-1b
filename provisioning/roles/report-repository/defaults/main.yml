@@ -12,7 +12,7 @@ report_repository_trainee_repo_prefix: vuln-report
 
 # Trainee account used in the training exercises (git clone .../<trainee_user>/cynet-report.git)
 report_repository_trainee_user: git
-report_repository_trainee_password: "git"
+report_repository_trainee_password: "CyberRange2b!"
 report_repository_trainee_email: "git@cyberrange.internal"
 report_repository_trainee_repo: cynet-report
 report_repository_healthcheck:
