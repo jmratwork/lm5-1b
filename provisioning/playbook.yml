@@ -63,13 +63,6 @@
   roles:
     - role: instructor-console
 
-###### Target network: CYNET DC1 - Identity & Access (OpenLDAP + phpLDAPadmin)
-- name: Deploy CYNET DC1 Identity and Access services
-  hosts: cynet-dc1
-  become: true
-  roles:
-    - role: cynet-dc1
-
 ###### Frontend: pentest workstations
 - name: Configure pentest workstations
   hosts: pentest-workstation-01,pentest-workstation-02
@@ -79,3 +72,11 @@
   roles:
     - pentest-workstation
     - pentest-tools
+
+###### Target network: CYNET DC1 - Identity & Access (OpenLDAP + phpLDAPadmin)
+- name: Deploy CYNET DC1 Identity and Access services
+  hosts: cynet-dc1
+  become: true
+  ignore_errors: true
+  roles:
+    - role: cynet-dc1
