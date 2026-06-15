@@ -126,3 +126,6 @@ groups:
     hosts:
       - pentest-workstation-01
       - pentest-workstation-02
+  - name: cynet_targets
+    hosts:
+      - cynet-dc1
