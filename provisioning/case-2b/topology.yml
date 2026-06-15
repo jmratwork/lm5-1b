@@ -121,4 +121,8 @@ router_mappings:
   - router: rep-gateway
     network: target-zone
     ip: 10.20.40.1
-groups: []
+groups:
+  - name: pentest_workstations
+    hosts:
+      - pentest-workstation-01
+      - pentest-workstation-02
