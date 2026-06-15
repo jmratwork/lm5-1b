@@ -21,6 +21,10 @@ cynet_dc1_ldapadmin_port: 8180
 cynet_dc1_ssh_mgmt_user: cynetadmin
 cynet_dc1_ssh_mgmt_password: "Cynet@2024"
 
+# Docker Hub credentials — override via -e or group_vars to avoid anonymous pull rate limits
+dockerhub_username: ""
+dockerhub_password: ""
+
 cynet_dc1_ldap_healthcheck:
   host: "127.0.0.1"
   port: "{{ cynet_dc1_ldap_port }}"

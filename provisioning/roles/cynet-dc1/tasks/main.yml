@@ -55,9 +55,20 @@
     mode: "0644"
   notify: restart cynet-dc1 services
 
+- name: Log in to Docker Hub
+  community.docker.docker_login:
+    username: "{{ dockerhub_username }}"
+    password: "{{ dockerhub_password }}"
+  when: dockerhub_username is defined and dockerhub_password is defined
+        and dockerhub_username != "" and dockerhub_password != ""
+
 - name: Pull Docker images for cynet-dc1
   ansible.builtin.command:
     cmd: docker compose -f {{ cynet_dc1_compose_file }} pull
+  register: pull_result
+  until: pull_result.rc == 0
+  retries: 3
+  delay: 30
   changed_when: true
 
 - name: Start cynet-dc1 services
