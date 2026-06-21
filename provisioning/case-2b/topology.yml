@@ -122,10 +122,10 @@ router_mappings:
     network: target-zone
     ip: 10.20.40.1
 groups:
-  - name: pentest_workstations
+  - name: pentest-workstations
     hosts:
       - pentest-workstation-01
       - pentest-workstation-02
-  - name: cynet_targets
+  - name: cynet-targets
     hosts:
       - cynet-dc1
