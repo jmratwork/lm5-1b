@@ -123,9 +123,9 @@ router_mappings:
     ip: 10.20.40.1
 groups:
   - name: pentest-workstations
-    hosts:
+    nodes:
       - pentest-workstation-01
       - pentest-workstation-02
   - name: cynet-targets
-    hosts:
+    nodes:
       - cynet-dc1
