@@ -84,6 +84,34 @@
   retries: "{{ target_network_healthcheck.retries }}"
   delay: "{{ target_network_healthcheck.delay }}"
 
+- name: Initialise DVWA database (create/reset schema)
+  ansible.builtin.shell: |
+    set -o pipefail
+    base="http://127.0.0.1:{{ target_network_dvwa_port }}"
+    token_re="name=['\"]user_token['\"][^>]*value=['\"]\K[a-f0-9]+"
+    jar="$(mktemp)"
+    token="$(curl -s -c "$jar" "$base/setup.php" \
+      | grep -oP "$token_re" | head -n1)"
+    curl -s -b "$jar" -c "$jar" \
+      --data-urlencode "create_db=Create / Reset Database" \
+      --data-urlencode "user_token=$token" \
+      "$base/setup.php" -o /dev/null
+    ltoken="$(curl -s -c "$jar" "$base/login.php" \
+      | grep -oP "$token_re" | head -n1)"
+    curl -s -b "$jar" -c "$jar" -L \
+      --data-urlencode "username={{ target_network_dvwa_admin_user }}" \
+      --data-urlencode "password={{ target_network_dvwa_admin_password }}" \
+      --data-urlencode "Login=Login" \
+      --data-urlencode "user_token=$ltoken" \
+      "$base/login.php" | grep -qi logout
+  args:
+    executable: /bin/bash
+  register: dvwa_db_init
+  changed_when: true
+  retries: 6
+  delay: 10
+  until: dvwa_db_init.rc == 0
+
 - name: Wait for phpMyAdmin to be reachable
   ansible.builtin.uri:
     url: "{{ target_network_phpmyadmin_healthcheck.url }}"

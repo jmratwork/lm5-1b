@@ -1,0 +1,120 @@
+---
+# Post-deployment smoke test for PUC2-Sub Case 2b.
+#
+# Non-destructive end-to-end validation of the trainee-facing hands-on steps:
+#   - DVWA login (admin/password) succeeds -> schema is initialised.
+#   - SQL Injection returns the 'dvwa' database name.
+#   - Weak SSH credentials labuser/labuser authenticate.
+#   - A push to the Gitea report repo works (temporary branch, cleaned up).
+#
+# Run it against the same inventory used for the main playbook:
+#   provisioning/run_playbook.sh inventory.ini tests/smoke_test.yml
+# or directly:
+#   ansible-playbook -i inventory.ini tests/smoke_test.yml
+#
+# Any failed check aborts the play with an explicit message.
+
+- name: Smoke test - DVWA (login + SQL Injection)
+  hosts: target-server
+  become: true
+  gather_facts: false
+  vars:
+    dvwa_base: "http://127.0.0.1:{{ target_network_dvwa_port | default(80) }}"
+    dvwa_user: "{{ target_network_dvwa_admin_user | default('admin') }}"
+    dvwa_password: >-
+      {{ target_network_dvwa_admin_password | default('password') }}
+    ssh_weak_user: "{{ target_network_ssh_weak_user | default('labuser') }}"
+    ssh_weak_password: >-
+      {{ target_network_ssh_weak_password | default('labuser') }}
+  tasks:
+    - name: DVWA - login as admin and confirm authenticated session
+      ansible.builtin.shell: |
+        set -o pipefail
+        base="{{ dvwa_base }}"
+        token_re="name=['\"]user_token['\"][^>]*value=['\"]\K[a-f0-9]+"
+        jar="$(mktemp)"
+        ltoken="$(curl -s -c "$jar" "$base/login.php" \
+          | grep -oP "$token_re" | head -n1)"
+        curl -s -b "$jar" -c "$jar" -L \
+          --data-urlencode "username={{ dvwa_user }}" \
+          --data-urlencode "password={{ dvwa_password }}" \
+          --data-urlencode "Login=Login" \
+          --data-urlencode "user_token=$ltoken" \
+          "$base/login.php" | grep -qi logout
+      args:
+        executable: /bin/bash
+      changed_when: false
+      register: dvwa_login
+      failed_when: dvwa_login.rc != 0
+
+    - name: DVWA - SQL Injection returns the 'dvwa' database name
+      ansible.builtin.shell: |
+        set -o pipefail
+        base="{{ dvwa_base }}"
+        token_re="name=['\"]user_token['\"][^>]*value=['\"]\K[a-f0-9]+"
+        jar="$(mktemp)"
+        # Authenticate to obtain a valid session cookie.
+        ltoken="$(curl -s -c "$jar" "$base/login.php" \
+          | grep -oP "$token_re" | head -n1)"
+        curl -s -b "$jar" -c "$jar" -L \
+          --data-urlencode "username={{ dvwa_user }}" \
+          --data-urlencode "password={{ dvwa_password }}" \
+          --data-urlencode "Login=Login" \
+          --data-urlencode "user_token=$ltoken" \
+          "$base/login.php" -o /dev/null
+        # Force security=low for the injection.
+        curl -s -b "security=low" -b "$jar" \
+          -G "$base/dvwa/vulnerabilities/sqli/" \
+          --data-urlencode "id=1' UNION SELECT 1,database()-- -" \
+          --data-urlencode "Submit=Submit" | grep -qi 'dvwa'
+      args:
+        executable: /bin/bash
+      changed_when: false
+      register: dvwa_sqli
+      failed_when: dvwa_sqli.rc != 0
+
+    - name: SSH - weak credentials labuser/labuser authenticate
+      ansible.builtin.shell: |
+        set -o pipefail
+        sshpass -p '{{ ssh_weak_password }}' \
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+          {{ ssh_weak_user }}@127.0.0.1 whoami | grep -qx '{{ ssh_weak_user }}'
+      args:
+        executable: /bin/bash
+      changed_when: false
+      register: ssh_weak
+      failed_when: ssh_weak.rc != 0
+
+- name: Smoke test - Gitea report repository push
+  hosts: report-repository
+  become: true
+  gather_facts: false
+  vars:
+    gitea_host: "127.0.0.1:{{ report_repository_http_port | default(3000) }}"
+    gitea_user: "{{ report_repository_trainee_user | default('git') }}"
+    gitea_password: >-
+      {{ report_repository_trainee_password | default('CyberRange2b!') }}
+    gitea_repo: "{{ report_repository_trainee_repo | default('cynet-report') }}"
+  tasks:
+    - name: Gitea - clone, push a throwaway branch, then delete it
+      ansible.builtin.shell: |
+        set -o pipefail
+        tmp="$(mktemp -d)"
+        trap 'rm -rf "$tmp"' EXIT
+        creds="{{ gitea_user }}:{{ gitea_password | urlencode }}"
+        path="{{ gitea_user }}/{{ gitea_repo }}.git"
+        url="http://${creds}@{{ gitea_host }}/${path}"
+        branch="smoke-test-$$"
+        git -C "$tmp" clone -q "$url" repo
+        cd "$tmp/repo"
+        git config user.email smoke@cyberrange.internal
+        git config user.name "smoke-test"
+        git checkout -q -b "$branch"
+        git commit -q --allow-empty -m "smoke test push"
+        git push -q origin "$branch"
+        git push -q origin --delete "$branch"
+      args:
+        executable: /bin/bash
+      changed_when: false
+      register: gitea_push
+      failed_when: gitea_push.rc != 0

@@ -38,6 +38,24 @@ cp inventory.sample inventory.ini
 provisioning/run_playbook.sh inventory.ini
 ```
 
+## Smoke test
+
+After a deployment, run the non-destructive smoke test to confirm the
+trainee-facing hands-on steps actually work (not just that they score):
+
+```bash
+provisioning/run_playbook.sh inventory.ini tests/smoke_test.yml
+```
+
+It validates, against the same inventory:
+
+- **DVWA login** (`admin`/`password`) — proves the database schema was initialised.
+- **SQL Injection** returns the `dvwa` database name.
+- **Weak SSH** (`labuser`/`labuser`) authenticates (requires `sshpass` on `target-server`).
+- **Gitea push** — clones the report repo, pushes a throwaway branch and deletes it.
+
+Any failed check aborts the play with an explicit error.
+
 ## Role reference
 
 ### `rep-core`
