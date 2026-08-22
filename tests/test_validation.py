@@ -249,9 +249,16 @@ def test_reporting_workspace_repo_setup_precedes_package_install():
     assert repo_index < install_index, "Repository configuration must run before package installation"
     assert repo_task.get("loop") == "{{ reporting_workspace_grafana_repositories }}"
 
-    block = repo_task.get("block", [])
-    assert any("ansible.builtin.apt_repository" in step for step in block), (
-        "Repository block should configure package repositories"
+    include_file = repo_task.get("ansible.builtin.include_tasks")
+    assert include_file == "configure_grafana_repository.yml", (
+        "Repository configuration should be delegated to configure_grafana_repository.yml"
+    )
+
+    repo_steps = load_yaml(
+        "provisioning/roles/reporting-workspace/tasks/configure_grafana_repository.yml"
+    )
+    assert any("ansible.builtin.apt_repository" in step for step in repo_steps), (
+        "The included repository tasks should configure the package repository"
     )
 
 

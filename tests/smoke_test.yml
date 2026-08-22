@@ -14,6 +14,34 @@
 #
 # Any failed check aborts the play with an explicit message.
 
+- name: Smoke test - cross-zone reachability from the pentest workstation
+  # Validates that the trainee's actual vantage point (rep-frontend) can route to
+  # the target-zone and analytics-zone through rep-gateway. If this fails, every
+  # hands-on level is blocked regardless of the services being healthy.
+  hosts: pentest_workstations
+  become: false
+  gather_facts: false
+  tasks:
+    - name: Workstation can reach DVWA in the target zone (frontend -> target-zone routing)
+      ansible.builtin.uri:
+        url: "http://{{ pentest_tools_target_host | default('10.20.40.10') }}/login.php"
+        status_code: 200
+        timeout: 15
+      register: ws_to_target
+      until: ws_to_target.status == 200
+      retries: 5
+      delay: 5
+
+    - name: Workstation can reach the Gitea report repo (frontend -> analytics-zone routing)
+      ansible.builtin.uri:
+        url: "http://10.20.30.20:{{ report_repository_http_port | default(3000) }}/api/v1/version"
+        status_code: 200
+        timeout: 15
+      register: ws_to_gitea
+      until: ws_to_gitea.status == 200
+      retries: 5
+      delay: 5
+
 - name: Smoke test - DVWA (login + SQL Injection)
   hosts: target-server
   become: true
