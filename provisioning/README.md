@@ -51,6 +51,10 @@ provisioning/run_playbook.sh inventory.ini tests/smoke_test.yml
 
 It validates, against the same inventory:
 
+- **Cross-zone routing** — from `pentest-workstation-01`, confirms HTTP reachability to
+  DVWA (`10.20.40.10`, target-zone) and the Gitea API (`10.20.30.20:3000`, analytics-zone).
+  This runs first, so broken inter-zone routing through `rep-gateway` fails fast instead of
+  masquerading as healthy services.
 - **DVWA login** (`admin`/`password`) — proves the database schema was initialised.
 - **SQL Injection** returns the `dvwa` database name.
 - **Weak SSH** (`labuser`/`labuser`) authenticates (requires `sshpass` on `target-server`).

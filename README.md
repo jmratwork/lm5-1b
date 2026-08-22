@@ -122,7 +122,8 @@ confirm the trainee-facing hands-on steps actually work:
 provisioning/run_playbook.sh inventory.ini tests/smoke_test.yml
 ```
 
-It checks DVWA login and SQL injection, weak-credential SSH, and a Gitea push.
+It checks cross-zone routing from the pentest workstation (to DVWA and Gitea),
+DVWA login and SQL injection, weak-credential SSH, and a Gitea push.
 See `provisioning/README.md` for the details.
 
 ## Credential management
