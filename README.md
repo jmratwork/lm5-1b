@@ -39,9 +39,13 @@ The complete step-by-step definition is in `training_linear.json`.
 | `provisioning/playbook.yml` | Main Ansible playbook orchestrating all roles |
 | `provisioning/roles/` | Ansible roles for each platform component |
 | `provisioning/case-2b/` | Scenario-specific topology and helper scripts |
+| `provisioning/scripts/` | CACAO playbook lifecycle helpers (NG-SOC / NG-SOAR / CI-CMS APIs) + bats tests |
 | `docs/subcase-2b-network-vuln-training.md` | Detailed deployment and operational guide |
+| `docs/provisioning-guide.md` | Step-by-step KYPO/CRCZ topology import and Ansible run |
 | `group_vars/trainees.yml` | Shared variables for pentest workstations |
 | `inventory.sample` | Inventory template — load secrets via Ansible Vault or environment variables |
+| `tests/test_validation.py` | Offline validation of the training definition and topology files |
+| `tests/smoke_test.yml` | Post-deployment smoke test of the trainee-facing hands-on steps |
 
 ## Infrastructure summary
 
@@ -53,6 +57,7 @@ The complete step-by-step definition is in `training_linear.json`.
 | Reporting dashboard | reporting-workspace | 10.20.30.10 | analytics-zone | Grafana + PostgreSQL |
 | Report repository | report-repository | 10.20.30.20 | analytics-zone | Gitea (Docker) |
 | Target network | target-server | 10.20.40.10 | target-zone | DVWA + weak SSH (Docker) |
+| CYNET identity & access | cynet-dc1 | 10.20.40.20 | target-zone | OpenLDAP + phpLDAPadmin (Docker) |
 
 All networks are interconnected via `rep-gateway` (Debian 12 router).
 The `target-zone` (10.20.40.0/24) is accessible from the frontend network but isolated from backends.
@@ -66,6 +71,7 @@ first-run checklist.
 
 ```bash
 # 1. Copy and fill the inventory
+#    (inventory.ini is committed as a placeholder — overwrite it with your own copy)
 cp inventory.sample inventory.ini
 # Edit inventory.ini with real host addresses and credentials
 
@@ -84,6 +90,7 @@ export ANSIBLE_PASSWORD_INSTRUCTOR=...
 export ANSIBLE_PASSWORD_PENTEST1=...
 export ANSIBLE_PASSWORD_PENTEST2=...
 export ANSIBLE_PASSWORD_TARGET=...
+export ANSIBLE_PASSWORD_CYNET_DC1=...
 export ANSIBLE_PASSWORD_REPORTING=...
 export ANSIBLE_PASSWORD_REPORT_REPO=...
 ```
@@ -103,6 +110,20 @@ pytest
 
 The tests verify that `training_linear.json` is structurally valid and sequential,
 and that the topology files only reference defined hosts, networks, and routers.
+They also check that key role defaults (pentest tools, target network, report
+repository, reporting workspace) still expose the variables the scenario relies on.
+
+## Validating a deployment
+
+After provisioning, run the non-destructive smoke test against the same inventory to
+confirm the trainee-facing hands-on steps actually work:
+
+```bash
+provisioning/run_playbook.sh inventory.ini tests/smoke_test.yml
+```
+
+It checks DVWA login and SQL injection, weak-credential SSH, and a Gitea push.
+See `provisioning/README.md` for the details.
 
 ## Credential management
 

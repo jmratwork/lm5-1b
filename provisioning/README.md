@@ -11,6 +11,7 @@ Network Vulnerability Identification Training scenario on CyberRangeCZ.
 | `instructor_console` | `instructor-console` | Instructor terminal with tmux and browser shortcuts |
 | `pentest_workstations` | `pentest-workstation-01`, `pentest-workstation-02` | Ubuntu workstations with Nmap and pentest scripts |
 | `target_servers` | `target-server` | Vulnerable services: DVWA (port 80) + weak SSH (port 22) |
+| `cynet_targets` | `cynet-dc1` | CYNET identity & access layer: OpenLDAP (389) + phpLDAPadmin (8180) |
 | `reporting_workspace` | `reporting-workspace` | Grafana dashboards + PostgreSQL |
 | `report_repositories` | `report-repository` | Gitea report repository (Docker, port 3000) |
 
@@ -29,6 +30,7 @@ Network Vulnerability Identification Training scenario on CyberRangeCZ.
 ```bash
 # 1. Export credentials or prepare an Ansible Vault file
 export ANSIBLE_PASSWORD_TARGET='...'
+export ANSIBLE_PASSWORD_CYNET_DC1='...'
 export ANSIBLE_PASSWORD_REPORT_REPO='...'
 
 # 2. Copy and adjust the inventory
@@ -71,20 +73,44 @@ report writing. Web root: `/srv/lms/`.
 
 ### `target-network`
 Deploys vulnerable services via Docker Compose on `target-server` (10.20.40.10):
-- **DVWA** (Damn Vulnerable Web Application) on port 80 — web application vulnerabilities
+- **DVWA** (Damn Vulnerable Web Application) on port 80 — web application vulnerabilities.
+  The database schema is initialised at deploy time, so `admin`/`password` works without
+  visiting `setup.php` first.
+- **MariaDB** exposed on port 3306 — Databases layer misconfiguration
+- **phpMyAdmin** on port 8080 — exposed database admin panel
+- **Core Services nginx portal** on port 8443
 - **Weak-credential SSH** on port 22 — misconfigured authentication (labuser / labuser)
 
-Key variables: `target_network_dvwa_port`, `target_network_ssh_weak_user`,
-`target_network_ssh_weak_password`, `target_network_dvwa_db_password`.
+Key variables: `target_network_dvwa_port`, `target_network_dvwa_db_password`,
+`target_network_mariadb_port`, `target_network_phpmyadmin_port`,
+`target_network_core_services_port`, `target_network_ssh_weak_user`,
+`target_network_ssh_weak_password`.
+
+### `cynet-dc1`
+Deploys the CYNET identity and access layer via Docker Compose on `cynet-dc1`
+(10.20.40.20), in the same `target-zone` as `target-server`:
+- **OpenLDAP** on ports 389/636 — anonymous bind enabled (intended vulnerability)
+- **phpLDAPadmin** on port 8180 — admin panel exposed over plain HTTP
+- **Weak SSH management account** (`cynetadmin`)
+
+Key variables: `cynet_dc1_ldap_domain`, `cynet_dc1_ldap_admin_password`,
+`cynet_dc1_ldapadmin_port`, `cynet_dc1_ssh_mgmt_user`, `cynet_dc1_ssh_mgmt_password`,
+`dockerhub_username` / `dockerhub_password` (override to avoid anonymous pull rate limits).
+
+> The play for this role runs with `ignore_errors: true` so that a failure in the
+> optional identity layer does not abort the rest of the deployment.
 
 ### `report-repository`
 Deploys Gitea via Docker Compose on `report-repository` (10.20.30.20).
 - Web UI: `http://report-repo.internal:3000/`
 - SSH port: 2222
 - Creates the `cyberrange-2b` organisation automatically on first run.
+- Creates the trainee account and its `cynet-report` repository, and seeds it with the
+  vulnerability report template (`templates/report-template.md.j2`).
 
 Key variables: `report_repository_http_port`, `report_repository_admin_user`,
-`report_repository_admin_password`, `report_repository_org_name`.
+`report_repository_admin_password`, `report_repository_org_name`,
+`report_repository_trainee_user`, `report_repository_trainee_repo`.
 
 ### `reporting-workspace`
 Installs PostgreSQL and Grafana on `reporting-workspace` (10.20.30.10).
@@ -98,13 +124,27 @@ Configures the instructor's Ubuntu workstation with tmux sessions and shell shor
 Default shortcuts open the LMS portal, Gitea, Grafana, and the target server status.
 Key variables: `instructor_console_shortcuts`, `instructor_console_tmux_settings`.
 
-### `pentest-tools`
-Installs Nmap and supporting packages on each pentest workstation, creates the
-`/opt/pentest/` workspace, deploys a pre-configured scan script, and sets up a
-welcome MOTD with URLs and target information.
+### `pentest-workstation`
+Prepares trainee login on `pentest-workstation-01/02`: sets the `ubuntu` account
+password and enables SSH password authentication (lab environments only).
 
-Key variables: `pentest_tools_target_range`, `pentest_tools_results_dir`,
-`pentest_tools_nmap_packages`, `pentest_tools_openvas_enabled` (default: false).
+Key variables: `pentest_user_name`, `pentest_user_password`.
+
+### `pentest-tools`
+Installs the assessment toolchain on each pentest workstation, creates the
+`/opt/pentest/` workspace (`scripts/`, `results/`, `tools/`), deploys pre-configured
+launcher scripts, and sets up a welcome MOTD with URLs and target information.
+
+- **Nmap** plus `nikto`, `sqlmap`, `hydra`, `dnsutils` and other CLI tooling
+- **OWASP ZAP** run from the `ghcr.io/zaproxy/zaproxy:stable` container
+  (Docker Engine is installed by this role), with `zap-scan.sh`
+- **Burp Suite Community Edition** JAR plus `burp-launcher.sh`
+- `nmap-scan.sh` — pre-configured scan against the target range
+
+Key variables: `pentest_tools_target_range`, `pentest_tools_target_host`,
+`pentest_tools_results_dir`, `pentest_tools_nmap_packages`,
+`pentest_tools_extra_packages`, `pentest_tools_zap_image`,
+`pentest_tools_burp_download_url`, `pentest_tools_openvas_enabled` (default: false).
 
 ## Helper scripts
 
@@ -112,6 +152,21 @@ Key variables: `pentest_tools_target_range`, `pentest_tools_results_dir`,
 |--------|---------|
 | `case-2b/scripts/export_scan_results.sh` | Export trainee report metadata from Gitea API to JSON |
 | `case-2b/topology.yml` | Scenario-specific topology (mirrors root `topology.yml`) |
+
+### CACAO playbook lifecycle (`scripts/`)
+
+Independent of the sandbox provisioning, these scripts push the CACAO playbook to the
+NG-SOC repository, NG-SOAR and CI-CMS. They require `http` (HTTPie) and `jq`, and the
+`SOC_USER`, `SOC_PASS`, `NG_SOC_API_BASE`, `NG_SOAR_API_BASE` and `CICMS_API_BASE`
+environment variables.
+
+| Script | Usage |
+|--------|-------|
+| `scripts/create_playbook.sh` | `create_playbook.sh path/to/playbook.json` |
+| `scripts/update_playbook.sh` | `update_playbook.sh playbook_identifier path/to/playbook.json` |
+| `scripts/share_playbook.sh` | `share_playbook.sh playbook_identifier ctiss_channel` |
+
+Sample payloads live in `scripts/examples/`; the bats suite is `scripts/tests/playbook_scripts.bats`.
 
 ## Parameterisation
 

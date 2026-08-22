@@ -24,6 +24,11 @@ services:
   # --- Application Servers layer ---
 
   dvwa:
+    # WARNING: floating tag. The training definition
+    # (V5_puc2_sub_case_2b_network_vulnerability_training.json) hard-codes the
+    # expected answers "Apache 2.4.25" and "Debian" from this image. If the tag
+    # drifts, levels 10/18 and the final test will grade correct answers as wrong;
+    # pin a digest here and update those answers together if you bump the image.
     image: vulnerables/web-dvwa:latest
     container_name: cynet-dvwa
     restart: unless-stopped
