@@ -1,0 +1,37 @@
+# CYNET Target-Server — Vulnerability Assessment Report
+
+> Template for PUC2-Sub Case 2b. Copy this file to `my-report.md`, fill in every
+> section, then commit and push it to this repository.
+
+- **Author:** <your name>
+- **Date:** <YYYY-MM-DD>
+- **Target:** target-server (10.20.40.10)
+- **Scope:** 10.20.40.0/24 (CYNET simulated network)
+
+## 1. Executive Summary
+
+<Two or three sentences summarising the overall security posture of target-server
+and the most critical risks identified.>
+
+## 2. Findings
+
+| # | Finding | Severity | Host | Port | Evidence | Recommendation |
+|---|---------|----------|------|------|----------|----------------|
+| 1 | Outdated Apache HTTP server (2.4.25) | High | target-server | 80 | `nmap -sV` / `curl -I` Server header | Upgrade Apache to a supported release; hide the version banner (`ServerTokens Prod`). |
+| 2 | DVWA default credentials (admin/password) | Critical | target-server | 80 | Successful login at http://10.20.40.10/login.php | Remove default accounts; enforce strong, unique passwords. |
+| 3 | SQL Injection in DVWA sqli module | Critical | target-server | 80 | UNION payload returns the `dvwa` database and `users` table | Use parameterised queries / prepared statements; validate input. |
+| 4 | phpMyAdmin exposed on the network | High | target-server | 8080 | HTTP 200 at http://10.20.40.10:8080/ | Restrict admin panels to management networks; require authentication. |
+| 5 | SSH weak credentials (labuser/labuser) | Critical | target-server | 22 | `ssh labuser@10.20.40.10` with password `labuser` | Enforce strong passwords / key-based auth; disable password login. |
+| 6 | MariaDB exposed to the network | Medium | target-server | 3306 | `nmap -sV -p 3306` returns MariaDB 10.11 | Bind the database to localhost / internal VLAN only; firewall port 3306. |
+
+<Add rows for any additional findings you discovered.>
+
+## 3. Recommendations
+
+1. <Highest-priority remediation and why.>
+2. <Second remediation.>
+3. <Further hardening steps.>
+
+## 4. Conclusion
+
+<Brief closing statement on residual risk and next steps.>

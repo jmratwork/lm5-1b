@@ -37,7 +37,7 @@ rep-gateway (Debian 12 router — interconnects all four networks)
 | Gitea (reports) | http://report-repo.internal:3000/ | Trainee report submission + instructor review |
 | Grafana | http://reporting.internal:3000/ | Cohort metrics dashboard |
 | DVWA (target) | http://10.20.40.10/ | Vulnerable web app — lab only |
-| Target SSH | 10.20.40.10:22 | Weak credentials: labuser / Password123 |
+| Target SSH | 10.20.40.10:22 | Weak credentials: labuser / labuser |
 
 ---
 

@@ -72,7 +72,7 @@ report writing. Web root: `/srv/lms/`.
 ### `target-network`
 Deploys vulnerable services via Docker Compose on `target-server` (10.20.40.10):
 - **DVWA** (Damn Vulnerable Web Application) on port 80 — web application vulnerabilities
-- **Weak-credential SSH** on port 22 — misconfigured authentication (labuser / Password123)
+- **Weak-credential SSH** on port 22 — misconfigured authentication (labuser / labuser)
 
 Key variables: `target_network_dvwa_port`, `target_network_ssh_weak_user`,
 `target_network_ssh_weak_password`, `target_network_dvwa_db_password`.

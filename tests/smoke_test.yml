@@ -64,7 +64,7 @@
           "$base/login.php" -o /dev/null
         # Force security=low for the injection.
         curl -s -b "security=low" -b "$jar" \
-          -G "$base/dvwa/vulnerabilities/sqli/" \
+          -G "$base/vulnerabilities/sqli/" \
           --data-urlencode "id=1' UNION SELECT 1,database()-- -" \
           --data-urlencode "Submit=Submit" | grep -qi 'dvwa'
       args:
