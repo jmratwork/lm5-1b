@@ -38,6 +38,9 @@ The complete step-by-step definition is in `training_linear.json`.
 | `training_linear.json` | Learning sequence — 3 phases, 11 steps, actors, tools, success criteria |
 | `provisioning/playbook.yml` | Main Ansible playbook orchestrating all roles |
 | `provisioning/roles/` | Ansible roles for each platform component |
+| `provisioning/roles/man/` | syslog-ng forwarding configuration applied to the sandbox MAN node |
+| `provisioning/collections.yml` | Ansible collections required by the playbook |
+| `provisioning/requirements.yml` | External Galaxy roles required by the playbook (`sandbox-logging`) |
 | `provisioning/case-2b/` | Scenario-specific topology and helper scripts |
 | `provisioning/scripts/` | CACAO playbook lifecycle helpers (NG-SOC / NG-SOAR / CI-CMS APIs) + bats tests |
 | `docs/subcase-2b-network-vuln-training.md` | Detailed deployment and operational guide |
@@ -79,6 +82,10 @@ cp inventory.sample inventory.ini
 provisioning/run_playbook.sh inventory.ini
 ```
 
+`run_playbook.sh` installs the collections listed in `provisioning/collections.yml`
+and the external Galaxy roles listed in `provisioning/requirements.yml` before
+running the playbook, so use it rather than calling `ansible-playbook` directly.
+
 ### Environment variables required
 
 ```bash
@@ -94,6 +101,20 @@ export ANSIBLE_PASSWORD_CYNET_DC1=...
 export ANSIBLE_PASSWORD_REPORTING=...
 export ANSIBLE_PASSWORD_REPORT_REPO=...
 ```
+
+## Sandbox logging
+
+The last two plays of `provisioning/playbook.yml` wire the sandbox into the
+CyberRangeCZ logging pipeline. They run against the groups the platform generates
+in its own inventory (`man`, `routers`, `hosts`), not against the hosts declared in
+`inventory.sample`:
+
+| Play | Target | What it does |
+|------|--------|--------------|
+| `Configure syslog-ng forwarding on the MAN node` | `man` | Deploys `/etc/syslog-ng/conf.d/forward-rfc5424-messages.conf` (RFC 5424 relay listening on TCP 514, forwarding to `10.250.232.186:515`) and restarts syslog-ng |
+| `Set up command logging` | `routers`, `hosts` | Applies the external `sandbox-logging` role to every Linux node, sending events to port 514 when a MAN node exists and directly to 515 otherwise |
+
+Outside CyberRangeCZ these groups are usually empty, so both plays are simply skipped.
 
 ## Exporting results
 

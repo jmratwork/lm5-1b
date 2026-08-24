@@ -82,19 +82,22 @@
     - role: cynet-dc1
 
 
-# --- Change man syslog-ng and adding Command Logging
-- name: Changing syslog-ng on man
+###### Sandbox logging: syslog-ng relay on the MAN node
+- name: Configure syslog-ng forwarding on the MAN node
   hosts: man
-  become: yes
+  become: true
   roles:
-    - man
+    - role: man
 
-- name: set up command logging
-  hosts: 
+###### Sandbox logging: command logging on every Linux node
+- name: Set up command logging
+  hosts:
     - routers
     - hosts
   roles:
     - role: sandbox-logging
-      become: yes
-      slf_destination_port: '{% if hostvars["man"] is defined -%} 514 {%- else -%} 515 {%- endif %}'
+      become: true
+      # Forward through the MAN relay (514) when the sandbox provides one,
+      # otherwise straight to the CyberRangeCZ collector (515).
+      slf_destination_port: "{{ 514 if ('man' in hostvars or groups.get('man', []) | length > 0) else 515 }}"
       when: ansible_system == "Linux"

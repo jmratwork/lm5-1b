@@ -13,13 +13,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PLAYBOOK="$SCRIPT_DIR/playbook.yml"
 COLLECTIONS_FILE="$SCRIPT_DIR/collections.yml"
+REQUIREMENTS_FILE="$SCRIPT_DIR/requirements.yml"
 
 require_cmd ansible-galaxy
 require_cmd ansible-playbook
 require_cmd wget
 require_cmd virtualbmc
 
-echo "[run_playbook] Installing required collections and running provisioning/playbook.yml." >&2
+echo "[run_playbook] Installing required collections and roles, then running provisioning/playbook.yml." >&2
 echo "[run_playbook] Use this wrapper instead of calling ansible-playbook directly on KYPO/CRCZ to avoid missing modules." >&2
 
 if [[ $# -gt 0 ]]; then
@@ -34,6 +35,11 @@ if [[ ! -f "$COLLECTIONS_FILE" ]]; then
   exit 1
 fi
 
+if [[ ! -f "$REQUIREMENTS_FILE" ]]; then
+  echo "[run_playbook] Requirements file '$REQUIREMENTS_FILE' not found" >&2
+  exit 1
+fi
+
 if [[ ! -f "$PLAYBOOK" ]]; then
   echo "[run_playbook] Playbook '$PLAYBOOK' not found" >&2
   exit 1
@@ -45,4 +51,5 @@ if [[ ! -f "$INVENTORY" ]]; then
 fi
 
 ansible-galaxy collection install -r "$COLLECTIONS_FILE"
+ansible-galaxy role install -r "$REQUIREMENTS_FILE"
 ansible-playbook -i "$INVENTORY" "$PLAYBOOK" "$@"
