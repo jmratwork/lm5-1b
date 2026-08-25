@@ -56,7 +56,7 @@ The complete step-by-step definition is in `training_linear.json`.
 |-----------|------|----|---------|-----------|
 | LMS course portal | rep-practical-labs | 10.20.10.40 | rep-backend | Nginx (port 8080) |
 | Instructor console | instructor-console | 10.20.20.10 | rep-frontend | Ubuntu + tmux |
-| Pentest workstations | pentest-workstation-01/02 | 10.20.20.50–60 | rep-frontend | Ubuntu + Nmap |
+| Pentest workstations | pentest-workstation-01/02 | 10.20.20.50–60 | rep-frontend | Ubuntu (console only) + Nmap/ZAP/curl/sqlmap |
 | Reporting dashboard | reporting-workspace | 10.20.30.10 | analytics-zone | Grafana + PostgreSQL |
 | Report repository | report-repository | 10.20.30.20 | analytics-zone | Gitea (Docker) |
 | Target network | target-server | 10.20.40.10 | target-zone | DVWA + weak SSH (Docker) |
@@ -67,6 +67,17 @@ The `target-zone` (10.20.40.0/24) is accessible from the frontend network but is
 
 See `docs/subcase-2b-network-vuln-training.md` for the full architecture description and
 first-run checklist.
+
+> **Pentest tooling note.** The pentest workstations are console-only hosts
+> (accessed via the browser terminal / SSH, with a headless JRE and no graphical
+> desktop). Nmap, curl, sqlmap and the headless OWASP ZAP scan
+> (`/opt/pentest/scripts/zap-scan.sh`, run in Docker) are fully usable there.
+> **Burp Suite Community is GUI-only and therefore not runnable on these hosts** —
+> `burp-launcher.sh` exits early when no X display is present. The Burp jar and
+> launcher are still provisioned for environments that add a graphical desktop
+> (X11 / VNC / Guacamole) or use X11 forwarding; in the default console-only lab,
+> manual web testing is done with curl + sqlmap and Burp's Repeater workflow is
+> taught as a concept.
 
 ![CYNET Activity Diagram](docs/figures/cynet-activity.png)
 
