@@ -119,7 +119,7 @@ ssh -o ConnectTimeout=5 labuser@10.20.40.10 echo "SSH OK"
 2. Open shortcuts: `open_lms_portal`, `open_gitea`, `open_grafana`
 3. In Gitea, create one repository per trainee under `cyberrange-2b` organisation:
    `vuln-report-<trainee-id>`
-4. Share trainee credentials (LMS, Gitea, pentest workstation SSH) with trainees
+4. Share trainee credentials (LMS, Gitea, pentest workstation console login) with trainees
 
 ### During the session
 
@@ -138,7 +138,9 @@ GITEA_TOKEN=<your-token> provisioning/case-2b/scripts/export_scan_results.sh /tm
 
 ## Trainee workflow
 
-1. SSH or Guacamole into `pentest-workstation-01` or `pentest-workstation-02`
+1. In the sandbox topology, right-click `pentest-workstation-01` or
+   `pentest-workstation-02` and choose **Open console** (trainees have no SSH
+   access package — the browser console is the only entry point)
 2. Read the welcome MOTD for URLs and target range
 3. Open browser → `http://lms.internal:8080/` → complete all 3 modules
 4. Run the pre-configured scan:

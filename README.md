@@ -68,10 +68,21 @@ The `target-zone` (10.20.40.0/24) is accessible from the frontend network but is
 See `docs/subcase-2b-network-vuln-training.md` for the full architecture description and
 first-run checklist.
 
-> **Pentest tooling note.** The pentest workstations are console-only hosts
-> (accessed via the browser terminal / SSH, with a headless JRE and no graphical
-> desktop). Nmap, curl, sqlmap and the headless OWASP ZAP scan
-> (`/opt/pentest/scripts/zap-scan.sh`, run in Docker) are fully usable there.
+### Trainee access
+
+Trainees have **no SSH access package and no direct SSH route into the sandbox**.
+The only entry point is the browser console offered by the topology view:
+right-click the `pentest-workstation-01` node and choose **Open console**, then log
+in as `ubuntu`. Instructors keep the usual SSH access from the control node.
+
+Keep this in mind when writing level content: any instruction of the form
+`ssh -F <ssh_config> ubuntu@10.20.20.50` cannot be followed by a trainee, so both
+the cloud and the local variants of an access level must describe the topology
+console instead.
+
+> **Pentest tooling note.** The pentest workstations are console-only hosts —
+> headless JRE, no graphical desktop. Nmap, curl, sqlmap and the headless OWASP ZAP
+> scan (`/opt/pentest/scripts/zap-scan.sh`, run in Docker) are fully usable there.
 > **Burp Suite Community is GUI-only and therefore not runnable on these hosts** —
 > `burp-launcher.sh` exits early when no X display is present. The Burp jar and
 > launcher are still provisioned for environments that add a graphical desktop

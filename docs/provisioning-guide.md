@@ -91,7 +91,7 @@ The playbook applies the following roles in order:
 2. Open `http://report-repo.internal:3000/` and log in as `gitea-admin`
 3. Create one repository per trainee under the `cyberrange-2b` organisation:
    `vuln-report-<trainee-id>`
-4. Share trainee credentials (pentest workstation SSH + Gitea login) with trainees
+4. Share trainee credentials (pentest workstation console login + Gitea login) with trainees
 5. Confirm LMS portal is accessible from pentest workstations: `curl http://lms.internal:8080/`
 6. Open Grafana `http://reporting.internal:3000/` and verify the Network Vuln Overview dashboard loads
 
