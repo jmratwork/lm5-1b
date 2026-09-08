@@ -130,6 +130,18 @@
       must_change_password: false
     status_code: [201, 422]
 
+# The create task above accepts 422 (already exists) as success. Verify the
+# account is actually present so a reserved/failed username surfaces here at
+# provisioning time, not later as an impossible "Upload the report" level.
+- name: Verify trainee user exists in Gitea
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ report_repository_http_port }}/api/v1/users/{{ report_repository_trainee_user }}"
+    method: GET
+    user: "{{ report_repository_admin_user }}"
+    password: "{{ report_repository_admin_password }}"
+    force_basic_auth: true
+    status_code: [200]
+
 - name: Create trainee report repository in Gitea
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ report_repository_http_port }}/api/v1/user/repos"

@@ -24,12 +24,14 @@ services:
   # --- Application Servers layer ---
 
   dvwa:
-    # WARNING: floating tag. The training definition
-    # (V5_puc2_sub_case_2b_network_vulnerability_training.json) hard-codes the
-    # expected answers "Apache 2.4.25" and "Debian" from this image. If the tag
-    # drifts, levels 10/18 and the final test will grade correct answers as wrong;
-    # pin a digest here and update those answers together if you bump the image.
-    image: vulnerables/web-dvwa:latest
+    # Pinned by digest. The training definition hard-codes the expected answers
+    # "Apache 2.4.25" (levels 10 + final test) and "Debian" (level 18) from this
+    # image, so the tag must NOT float. vulnerables/web-dvwa:latest has been frozen
+    # since 2018 (Apache/2.4.25 on Debian stretch); the digest below locks it.
+    # To bump the image you MUST update those graded answers in the training
+    # definition together. Refresh the digest with:
+    #   curl -s https://hub.docker.com/v2/repositories/vulnerables/web-dvwa/tags/latest | jq -r '.images[0].digest'
+    image: vulnerables/web-dvwa@sha256:dae203fe11646a86937bf04db0079adef295f426da68a92b40e3b181f337daa7
     container_name: cynet-dvwa
     restart: unless-stopped
     ports:
@@ -48,7 +50,10 @@ services:
   # Database admin panel: intentionally exposed without network restriction
   # Simulates misconfigured Databases layer in DC1
   phpmyadmin:
-    image: phpmyadmin:latest
+    # Pinned by digest for a reproducible lab (tag resolved: phpmyadmin:latest).
+    # Refresh with:
+    #   curl -s https://hub.docker.com/v2/repositories/library/phpmyadmin/tags/latest | jq -r '.digest'
+    image: phpmyadmin@sha256:3a8a8d6b5289091f959ba0293f21163b3a2fc5741991a53de70b3497fe8d31db
     container_name: cynet-phpmyadmin
     restart: unless-stopped
     ports:
