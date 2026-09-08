@@ -19,6 +19,16 @@
     state: started
     enabled: true
 
+# The psql tasks below run as become_user 'postgres'. Pre-create its Ansible
+# remote_tmp so Ansible doesn't emit a "remote_tmp did not exist" warning.
+- name: Ensure Ansible remote_tmp exists for the postgres user
+  ansible.builtin.file:
+    path: /var/lib/postgresql/.ansible/tmp
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: "0700"
+
 - name: Create REP reporting database
   ansible.builtin.command:
     cmd: >-
